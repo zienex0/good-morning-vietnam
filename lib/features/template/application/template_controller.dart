@@ -17,10 +17,7 @@ class TemplateController extends _$TemplateController {
   @override
   Future<TemplateState> build() async {
     final loadReceipt = ref.watch(loadTemplateReceiptUseCaseProvider);
-    final result = await loadReceipt(
-      track: ProjectTrack.engineering,
-      seats: 3,
-    );
+    final result = await loadReceipt(track: ProjectTrack.engineering, seats: 3);
 
     return switch (result) {
       Ok(value: final receipt) => TemplateState.fromReceipt(receipt),
@@ -57,7 +54,7 @@ class TemplateController extends _$TemplateController {
       return;
     }
 
-    state = AsyncLoading<TemplateState>().copyWithPrevious(state);
+    state = const AsyncLoading<TemplateState>().copyWithPrevious(state);
 
     final confirmReceipt = ref.read(confirmTemplateReceiptUseCaseProvider);
     final result = await confirmReceipt(current.receipt);
@@ -66,10 +63,9 @@ class TemplateController extends _$TemplateController {
       case Ok<void, Failure>():
         state = AsyncData(current); // count is owned by the stream provider
       case Err<void, Failure>(failure: final failure):
-        ref.read(loggerProvider).warn(
-          'Template receipt confirmation failed',
-          error: failure,
-        );
+        ref
+            .read(loggerProvider)
+            .warn('Template receipt confirmation failed', error: failure);
         state = AsyncError<TemplateState>(
           failure,
           StackTrace.current,
@@ -82,7 +78,7 @@ class TemplateController extends _$TemplateController {
     required int seats,
   }) async {
     final previous = state.valueOrNull ?? const TemplateState.initial();
-    state = AsyncLoading<TemplateState>().copyWithPrevious(state);
+    state = const AsyncLoading<TemplateState>().copyWithPrevious(state);
 
     final loadReceipt = ref.read(loadTemplateReceiptUseCaseProvider);
     final result = await loadReceipt(track: track, seats: seats);

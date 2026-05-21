@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('app opens the foundation home route', (tester) async {
+  testWidgets('app opens the budgeting home route', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MainApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Flutter Foundation Kit'), findsOneWidget);
-    expect(find.text('Foundation ready'), findsOneWidget);
+    expect(find.text('Japan 2026'), findsOneWidget);
+    expect(find.text('Expense'), findsOneWidget);
   });
 
   testWidgets('app applies the foundation theme', (tester) async {

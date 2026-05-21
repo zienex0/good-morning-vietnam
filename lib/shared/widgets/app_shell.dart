@@ -10,16 +10,19 @@ class AppShell extends StatelessWidget {
     required this.navigationShell,
     required this.destinations,
     this.includeNavigationBar = true,
+    this.drawer,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<AppShellDestination> destinations;
   final bool includeNavigationBar;
+  final Widget? drawer;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: drawer,
       body: navigationShell,
       bottomNavigationBar: includeNavigationBar
           ? _AppNavigationBar(

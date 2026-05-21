@@ -17,7 +17,9 @@ class ConfirmTemplateReceiptUseCase {
   Future<Result<void, Failure>> call(ProjectReceipt receipt) {
     if (receipt.track == null) {
       return Future.value(
-        const Err(ValidationFailure('Select a project track before confirming.')),
+        const Err(
+          ValidationFailure('Select a project track before confirming.'),
+        ),
       );
     }
     return _repository.confirmReceipt(receipt);

@@ -31,10 +31,7 @@ class AsyncValueView<T> extends StatelessWidget {
           data(previousValue),
           if (value.isLoading) const _AsyncLoadingOverlay(),
           if (value.hasError && !value.isLoading)
-            _AsyncErrorBanner(
-              error: value.error!,
-              onRetry: onRetry,
-            ),
+            _AsyncErrorBanner(error: value.error!, onRetry: onRetry),
         ],
       );
     }
@@ -140,10 +137,7 @@ class _AsyncErrorBanner extends StatelessWidget {
               ),
               if (onRetry != null) ...[
                 const SizedBox(width: AppSpacing.md),
-                TextButton(
-                  onPressed: onRetry,
-                  child: Text(context.l10n.retry),
-                ),
+                TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
               ],
             ],
           ),

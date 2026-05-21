@@ -79,9 +79,8 @@ class TemplateHomePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.pageBetweenSectionGap),
                   TemplateStateSection(
-                    confirmedCount: ref
-                            .watch(templateConfirmedCountProvider)
-                            .valueOrNull ??
+                    confirmedCount:
+                        ref.watch(templateConfirmedCountProvider).valueOrNull ??
                         0,
                   ),
                 ],

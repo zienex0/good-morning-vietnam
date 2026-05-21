@@ -59,4 +59,3 @@ TemplateRepository templateRepository(TemplateRepositoryRef ref) {
   ref.onDispose(repo.dispose);
   return repo;
 }
-

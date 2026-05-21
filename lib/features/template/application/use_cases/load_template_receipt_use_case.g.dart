@@ -7,7 +7,7 @@ part of 'load_template_receipt_use_case.dart';
 // **************************************************************************
 
 String _$loadTemplateReceiptUseCaseHash() =>
-    r'ef7f0c2be930cc66d027314eb2dcf0e61209449c';
+    r'e481583d0391c9e67924d15eee28ac61d6d6e20a';
 
 /// See also [loadTemplateReceiptUseCase].
 @ProviderFor(loadTemplateReceiptUseCase)
@@ -24,7 +24,6 @@ final loadTemplateReceiptUseCaseProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef LoadTemplateReceiptUseCaseRef =
-    ProviderRef<LoadTemplateReceiptUseCase>;
+typedef LoadTemplateReceiptUseCaseRef = ProviderRef<LoadTemplateReceiptUseCase>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

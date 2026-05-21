@@ -7,6 +7,8 @@ class AppKeyValueRow extends StatelessWidget {
     required this.value,
     this.labelStyle,
     this.valueStyle,
+    this.onTap,
+    this.trailing,
     super.key,
   });
 
@@ -14,10 +16,12 @@ class AppKeyValueRow extends StatelessWidget {
   final String value;
   final TextStyle? labelStyle;
   final TextStyle? valueStyle;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
@@ -27,9 +31,31 @@ class AppKeyValueRow extends StatelessWidget {
               style: labelStyle ?? context.mutedText.bodyMedium,
             ),
           ),
-          Text(value, style: valueStyle ?? context.text.bodyMedium),
+          const SizedBox(width: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: valueStyle ?? context.text.bodyMedium,
+              ),
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: AppSpacing.xs),
+            trailing!,
+          ],
         ],
       ),
     );
+
+    if (onTap == null) {
+      return row;
+    }
+
+    return GestureDetector(onTap: onTap, child: row);
   }
 }

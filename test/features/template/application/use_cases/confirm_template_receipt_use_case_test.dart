@@ -23,22 +23,30 @@ void main() {
     useCase = ConfirmTemplateReceiptUseCase(repo);
   });
 
-  test('returns a ValidationFailure without calling the repository when track is null', () async {
-    const receipt = ProjectReceipt(track: null, seats: 3);
+  test(
+    'returns a ValidationFailure without calling the repository when track is null',
+    () async {
+      const receipt = ProjectReceipt(track: null, seats: 3);
 
-    final result = await useCase(receipt);
+      final result = await useCase(receipt);
 
-    expect(result, isA<Err<void, Failure>>());
-    verifyNever(() => repo.confirmReceipt(any()));
-  });
+      expect(result, isA<Err<void, Failure>>());
+      verifyNever(() => repo.confirmReceipt(any()));
+    },
+  );
 
-  test('delegates to the repository when the receipt has a track selected', () async {
-    const receipt = ProjectReceipt(track: ProjectTrack.engineering, seats: 3);
-    when(() => repo.confirmReceipt(receipt)).thenAnswer((_) async => const Ok(null));
+  test(
+    'delegates to the repository when the receipt has a track selected',
+    () async {
+      const receipt = ProjectReceipt(track: ProjectTrack.engineering, seats: 3);
+      when(
+        () => repo.confirmReceipt(receipt),
+      ).thenAnswer((_) async => const Ok(null));
 
-    final result = await useCase(receipt);
+      final result = await useCase(receipt);
 
-    expect(result, isA<Ok<void, Failure>>());
-    verify(() => repo.confirmReceipt(receipt)).called(1);
-  });
+      expect(result, isA<Ok<void, Failure>>());
+      verify(() => repo.confirmReceipt(receipt)).called(1);
+    },
+  );
 }

@@ -4,9 +4,7 @@ import 'package:flutter_foundation_kit/features/template/domain/project_track.da
 class TemplateState {
   const TemplateState({required this.track, required this.seats});
 
-  const TemplateState.initial()
-    : track = ProjectTrack.engineering,
-      seats = 3;
+  const TemplateState.initial() : track = ProjectTrack.engineering, seats = 3;
 
   TemplateState.fromReceipt(ProjectReceipt receipt)
     : track = receipt.track,

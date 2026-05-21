@@ -13,7 +13,7 @@ void main() {
   late LoadTemplateReceiptUseCase useCase;
 
   setUpAll(() {
-    registerFallbackValue<ProjectTrack?>(ProjectTrack.engineering);
+    registerFallbackValue(ProjectTrack.engineering);
   });
 
   setUp(() {
@@ -21,29 +21,35 @@ void main() {
     useCase = LoadTemplateReceiptUseCase(repo);
   });
 
-  test('returns a ValidationFailure without calling the repository when seats is zero', () async {
-    final result = await useCase(track: ProjectTrack.engineering, seats: 0);
+  test(
+    'returns a ValidationFailure without calling the repository when seats is zero',
+    () async {
+      final result = await useCase(track: ProjectTrack.engineering, seats: 0);
 
-    expect(result, isA<Err<ProjectReceipt, Failure>>());
-    verifyNever(
-      () => repo.fetchReceipt(
-        track: any(named: 'track'),
-        seats: any(named: 'seats'),
-      ),
-    );
-  });
+      expect(result, isA<Err<ProjectReceipt, Failure>>());
+      verifyNever(
+        () => repo.fetchReceipt(
+          track: any(named: 'track'),
+          seats: any(named: 'seats'),
+        ),
+      );
+    },
+  );
 
-  test('delegates to the repository and returns the receipt when seats is valid', () async {
-    const receipt = ProjectReceipt(track: ProjectTrack.engineering, seats: 3);
-    when(
-      () => repo.fetchReceipt(track: ProjectTrack.engineering, seats: 3),
-    ).thenAnswer((_) async => const Ok(receipt));
+  test(
+    'delegates to the repository and returns the receipt when seats is valid',
+    () async {
+      const receipt = ProjectReceipt(track: ProjectTrack.engineering, seats: 3);
+      when(
+        () => repo.fetchReceipt(track: ProjectTrack.engineering, seats: 3),
+      ).thenAnswer((_) async => const Ok(receipt));
 
-    final result = await useCase(track: ProjectTrack.engineering, seats: 3);
+      final result = await useCase(track: ProjectTrack.engineering, seats: 3);
 
-    expect(result, isA<Ok<ProjectReceipt, Failure>>());
-    verify(
-      () => repo.fetchReceipt(track: ProjectTrack.engineering, seats: 3),
-    ).called(1);
-  });
+      expect(result, isA<Ok<ProjectReceipt, Failure>>());
+      verify(
+        () => repo.fetchReceipt(track: ProjectTrack.engineering, seats: 3),
+      ).called(1);
+    },
+  );
 }

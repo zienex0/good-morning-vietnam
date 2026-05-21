@@ -7,7 +7,7 @@ part of 'confirm_template_receipt_use_case.dart';
 // **************************************************************************
 
 String _$confirmTemplateReceiptUseCaseHash() =>
-    r'83e0d6eae1be4d6c337d3ad6b51a756fbd6f8ed2';
+    r'd0271891c7f0133db986f6bbaf4a300bd484608f';
 
 /// See also [confirmTemplateReceiptUseCase].
 @ProviderFor(confirmTemplateReceiptUseCase)

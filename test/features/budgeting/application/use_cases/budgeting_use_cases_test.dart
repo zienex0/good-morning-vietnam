@@ -1,0 +1,427 @@
+import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_average_daily_spend_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_days_left_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_total_accounts_balance_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/convert_to_home_currency_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_expense_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_top_up_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_trip_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/edit_trip_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/get_transaction_by_id_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/load_transactions_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/exchange_rate_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/exchange_rate.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('budgeting use cases', () {
+    test(
+      'creates an expense with a historical home-currency snapshot',
+      () async {
+        final trip = testTrip();
+        const account = Account(
+          id: 'account-1',
+          tripId: 'trip-1',
+          name: 'Cash JPY',
+          type: AccountType.cash,
+          currency: 'JPY',
+          openingBalance: 0,
+        );
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          accounts: [account],
+        );
+        final useCase = CreateExpenseUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 0.0062),
+          ),
+          idGenerator: const FixedBudgetingIdGenerator(
+            fixedTransactionId: 'txn-1',
+          ),
+        );
+
+        final result = await useCase(
+          tripId: trip.id,
+          accountId: account.id,
+          categoryId: 'food',
+          amount: 680,
+          occurredAt: DateTime(2026, 5, 20),
+          createdAt: DateTime(2026, 5, 20, 9),
+        );
+
+        final transaction = expectOk(result);
+        expect(transaction.type, TransactionType.expense);
+        expect(transaction.currency, 'JPY');
+        expect(transaction.amountHome, closeTo(4.216, 0.001));
+        expect(transaction.fxRate, 0.0062);
+      },
+    );
+
+    test(
+      'converts an entered receipt currency into the payment account currency',
+      () async {
+        final trip = testTrip();
+        const account = Account(
+          id: 'account-1',
+          tripId: 'trip-1',
+          name: 'Default wallet',
+          type: AccountType.ewallet,
+          currency: 'PLN',
+          openingBalance: 0,
+        );
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          accounts: [account],
+        );
+        final useCase = CreateExpenseUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            PairExchangeRateRepository({'VND:PLN': 0.00015, 'PLN:USD': 0.25}),
+          ),
+          idGenerator: const FixedBudgetingIdGenerator(
+            fixedTransactionId: 'txn-foreign-receipt',
+          ),
+        );
+
+        final result = await useCase(
+          tripId: trip.id,
+          accountId: account.id,
+          categoryId: 'toys',
+          amount: 90000,
+          amountCurrency: 'VND',
+          occurredAt: DateTime(2026, 5, 21),
+        );
+
+        final transaction = expectOk(result);
+        expect(transaction.currency, 'PLN');
+        expect(transaction.amount, closeTo(13.5, 0.001));
+        expect(transaction.amountHome, closeTo(3.375, 0.001));
+        expect(transaction.enteredAmount, 90000);
+        expect(transaction.enteredCurrency, 'VND');
+        expect(transaction.enteredFxRate, 0.00015);
+      },
+    );
+
+    test('creates a top-up for the selected account', () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'account-1',
+        tripId: 'trip-1',
+        name: 'Revolut JPY',
+        type: AccountType.card,
+        currency: 'JPY',
+        openingBalance: 0,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [account],
+      );
+      final useCase = CreateTopUpUseCase(
+        repository: repository,
+        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+          FakeExchangeRateRepository(rate: 0.006),
+        ),
+        idGenerator: const FixedBudgetingIdGenerator(
+          fixedTransactionId: 'txn-2',
+        ),
+      );
+
+      final result = await useCase(
+        tripId: trip.id,
+        accountId: account.id,
+        amount: 10000,
+        occurredAt: DateTime(2026, 5, 21),
+      );
+
+      final transaction = expectOk(result);
+      expect(transaction.type, TransactionType.income);
+      expect(transaction.sourceAccountId, isNull);
+      expect(transaction.destAccountId, account.id);
+      expect(transaction.amountHome, 60);
+    });
+
+    test('loads transactions and fetches one by id', () async {
+      final trip = testTrip();
+      final transaction = testExpense(amountHome: 12);
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        transactions: [transaction],
+      );
+
+      final transactions = expectOk(
+        await LoadTransactionsUseCase(repository)(tripId: trip.id),
+      );
+      final byId = expectOk(
+        await GetTransactionByIdUseCase(repository)(
+          transactionId: transaction.id,
+        ),
+      );
+
+      expect(transactions, [transaction]);
+      expect(byId, transaction);
+    });
+
+    test('calculates total account balance in home currency', () async {
+      final trip = testTrip();
+      const usdAccount = Account(
+        id: 'usd',
+        tripId: 'trip-1',
+        name: 'USD cash',
+        type: AccountType.cash,
+        currency: 'USD',
+        openingBalance: 100,
+      );
+      const jpyAccount = Account(
+        id: 'jpy',
+        tripId: 'trip-1',
+        name: 'JPY cash',
+        type: AccountType.cash,
+        currency: 'JPY',
+        openingBalance: 10000,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [usdAccount, jpyAccount],
+        transactions: [
+          testExpense(),
+          testTopUp(destAccountId: 'jpy', amountHome: 20),
+          testTransfer(amountHome: 30),
+        ],
+      );
+      final useCase = CalculateTotalAccountsBalanceUseCase(
+        repository: repository,
+        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+          FakeExchangeRateRepository(rate: 0.006),
+        ),
+      );
+
+      final total = expectOk(await useCase(tripId: trip.id));
+
+      expect(total, 170);
+    });
+
+    test('calculates average daily spend for elapsed trip days', () async {
+      final trip = testTrip();
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        transactions: [
+          testExpense(amountHome: 40),
+          testExpense(
+            id: 'txn-2',
+            amountHome: 60,
+            occurredAt: DateTime(2026, 5, 12),
+          ),
+        ],
+      );
+
+      final average = expectOk(
+        await CalculateAverageDailySpendUseCase(repository)(
+          tripId: trip.id,
+          asOf: DateTime(2026, 5, 12, 23),
+        ),
+      );
+
+      expect(average, 25);
+    });
+
+    test('calculates days left from balance and average spend', () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'usd',
+        tripId: 'trip-1',
+        name: 'USD cash',
+        type: AccountType.cash,
+        currency: 'USD',
+        openingBalance: 200,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [account],
+        transactions: [
+          testExpense(amountHome: 100, occurredAt: DateTime(2026, 5, 10)),
+        ],
+      );
+      final useCase = CalculateDaysLeftUseCase(
+        calculateAverageDailySpend: CalculateAverageDailySpendUseCase(
+          repository,
+        ),
+        calculateTotalAccountsBalance: CalculateTotalAccountsBalanceUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 1),
+          ),
+        ),
+      );
+
+      final daysLeft = expectOk(
+        await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 10)),
+      );
+
+      expect(daysLeft, 2);
+    });
+
+    test('creates and edits trips', () async {
+      final repository = FakeBudgetingRepository();
+      final created = expectOk(
+        await CreateTripUseCase(
+          repository: repository,
+          idGenerator: const FixedBudgetingIdGenerator(
+            fixedTripId: 'trip-created',
+          ),
+        )(
+          name: ' Japan 2026 ',
+          homeCurrency: 'usd',
+          startDate: DateTime(2026, 5, 9),
+          createdAt: DateTime(2026),
+        ),
+      );
+
+      expect(created.id, 'trip-created');
+      expect(created.name, 'Japan 2026');
+      expect(created.homeCurrency, 'USD');
+
+      final edited = expectOk(
+        await EditTripUseCase(repository)(
+          created.copyWith(name: 'Japan + Korea 2026', budgetTotal: 1800),
+        ),
+      );
+
+      expect(edited.name, 'Japan + Korea 2026');
+      expect(edited.budgetTotal, 1800);
+    });
+  });
+}
+
+Trip testTrip() {
+  return Trip(
+    id: 'trip-1',
+    name: 'Japan 2026',
+    homeCurrency: 'USD',
+    startDate: DateTime(2026, 5, 9),
+    endDate: DateTime(2026, 6, 8),
+    budgetTotal: 1500,
+    status: TripStatus.active,
+    createdAt: DateTime(2026),
+  );
+}
+
+Transaction testExpense({
+  String id = 'txn-1',
+  String sourceAccountId = 'usd',
+  double amountHome = 10,
+  DateTime? occurredAt,
+}) {
+  return Transaction(
+    id: id,
+    tripId: 'trip-1',
+    type: TransactionType.expense,
+    occurredAt: occurredAt ?? DateTime(2026, 5, 9),
+    sourceAccountId: sourceAccountId,
+    categoryId: 'food',
+    amount: amountHome,
+    currency: 'USD',
+    amountHome: amountHome,
+    fxRate: 1,
+    createdAt: DateTime(2026),
+  );
+}
+
+Transaction testTopUp({
+  String id = 'txn-top-up',
+  String destAccountId = 'usd',
+  double amountHome = 10,
+}) {
+  return Transaction(
+    id: id,
+    tripId: 'trip-1',
+    type: TransactionType.income,
+    occurredAt: DateTime(2026, 5, 9),
+    destAccountId: destAccountId,
+    amount: amountHome,
+    currency: 'USD',
+    amountHome: amountHome,
+    fxRate: 1,
+    createdAt: DateTime(2026),
+  );
+}
+
+Transaction testTransfer({double amountHome = 10}) {
+  return Transaction(
+    id: 'txn-transfer',
+    tripId: 'trip-1',
+    type: TransactionType.transfer,
+    occurredAt: DateTime(2026, 5, 9),
+    sourceAccountId: 'usd',
+    destAccountId: 'jpy',
+    amount: amountHome,
+    currency: 'USD',
+    amountHome: amountHome,
+    fxRate: 1,
+    createdAt: DateTime(2026),
+  );
+}
+
+T expectOk<T>(Result<T, Failure> result) {
+  return switch (result) {
+    Ok(value: final value) => value,
+    Err(failure: final failure) => throw TestFailure(
+      'Expected Ok, got $failure',
+    ),
+  };
+}
+
+class FakeExchangeRateRepository implements ExchangeRateRepository {
+  const FakeExchangeRateRepository({required this.rate});
+
+  final double rate;
+
+  @override
+  Future<Result<ExchangeRate, Failure>> fetchRate({
+    required CurrencyCode base,
+    required CurrencyCode quote,
+    required DateTime date,
+  }) async {
+    return Ok(ExchangeRate(base: base, quote: quote, rate: rate, date: date));
+  }
+}
+
+class PairExchangeRateRepository implements ExchangeRateRepository {
+  const PairExchangeRateRepository(this.rates);
+
+  final Map<String, double> rates;
+
+  @override
+  Future<Result<ExchangeRate, Failure>> fetchRate({
+    required CurrencyCode base,
+    required CurrencyCode quote,
+    required DateTime date,
+  }) async {
+    final rate = rates['$base:$quote'];
+    if (rate == null) {
+      return const Err(NotFoundFailure());
+    }
+    return Ok(ExchangeRate(base: base, quote: quote, rate: rate, date: date));
+  }
+}
+
+class FixedBudgetingIdGenerator implements BudgetingIdGenerator {
+  const FixedBudgetingIdGenerator({
+    this.fixedTransactionId = 'txn-fixed',
+    this.fixedTripId = 'trip-fixed',
+  });
+
+  final String fixedTransactionId;
+  final String fixedTripId;
+
+  @override
+  String transactionId() => fixedTransactionId;
+
+  @override
+  String tripId() => fixedTripId;
+}
