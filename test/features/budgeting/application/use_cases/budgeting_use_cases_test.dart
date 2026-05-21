@@ -414,14 +414,167 @@ class FixedBudgetingIdGenerator implements BudgetingIdGenerator {
   const FixedBudgetingIdGenerator({
     this.fixedTransactionId = 'txn-fixed',
     this.fixedTripId = 'trip-fixed',
+    this.fixedAccountId = 'acct-fixed',
   });
 
   final String fixedTransactionId;
   final String fixedTripId;
+  final String fixedAccountId;
 
   @override
   String transactionId() => fixedTransactionId;
 
   @override
   String tripId() => fixedTripId;
+
+  @override
+  String accountId() => fixedAccountId;
+}
+
+class FakeBudgetingRepository implements BudgetingRepository {
+  FakeBudgetingRepository({
+    Iterable<Trip> trips = const [],
+    Iterable<Account> accounts = const [],
+    Iterable<Transaction> transactions = const [],
+  }) : _trips = {for (final trip in trips) trip.id: trip},
+       _accounts = {for (final account in accounts) account.id: account},
+       _transactions = {
+         for (final transaction in transactions) transaction.id: transaction,
+       };
+
+  final Map<String, Trip> _trips;
+  final Map<String, Account> _accounts;
+  final Map<String, Transaction> _transactions;
+  String? _activeTripId;
+
+  @override
+  Future<Result<List<Trip>, Failure>> listTrips() async {
+    final list = _trips.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return Ok(list);
+  }
+
+  @override
+  Future<Result<List<Transaction>, Failure>> fetchTransactions({
+    required String tripId,
+  }) async {
+    final transactions = _transactions.values
+        .where((transaction) => transaction.tripId == tripId)
+        .toList()
+      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return Ok(transactions);
+  }
+
+  @override
+  Future<Result<Transaction, Failure>> fetchTransactionById({
+    required String transactionId,
+  }) async {
+    final transaction = _transactions[transactionId];
+    if (transaction == null) return const Err(NotFoundFailure());
+    return Ok(transaction);
+  }
+
+  @override
+  Future<Result<Transaction, Failure>> createTransaction(
+    Transaction transaction,
+  ) async {
+    if (!_trips.containsKey(transaction.tripId)) {
+      return const Err(NotFoundFailure());
+    }
+    _transactions[transaction.id] = transaction;
+    return Ok(transaction);
+  }
+
+  @override
+  Future<Result<List<Account>, Failure>> fetchAccounts({
+    required String tripId,
+    bool includeArchived = false,
+  }) async {
+    final accounts = _accounts.values
+        .where((account) => account.tripId == tripId)
+        .where((account) => includeArchived || !account.archived)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return Ok(accounts);
+  }
+
+  @override
+  Future<Result<Account, Failure>> fetchAccountById({
+    required String accountId,
+  }) async {
+    final account = _accounts[accountId];
+    if (account == null) return const Err(NotFoundFailure());
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<Account, Failure>> createAccount(Account account) async {
+    if (!_trips.containsKey(account.tripId)) {
+      return const Err(NotFoundFailure());
+    }
+    _accounts[account.id] = account;
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<Account, Failure>> updateAccount(Account account) async {
+    if (!_accounts.containsKey(account.id)) {
+      return const Err(NotFoundFailure());
+    }
+    _accounts[account.id] = account;
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteAccount({
+    required String accountId,
+  }) async {
+    if (!_accounts.containsKey(accountId)) {
+      return const Err(NotFoundFailure());
+    }
+    _accounts.remove(accountId);
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<Trip, Failure>> fetchTrip({required String tripId}) async {
+    final trip = _trips[tripId];
+    if (trip == null) return const Err(NotFoundFailure());
+    return Ok(trip);
+  }
+
+  @override
+  Future<Result<Trip, Failure>> createTrip(Trip trip) async {
+    _trips[trip.id] = trip;
+    return Ok(trip);
+  }
+
+  @override
+  Future<Result<Trip, Failure>> updateTrip(Trip trip) async {
+    if (!_trips.containsKey(trip.id)) {
+      return const Err(NotFoundFailure());
+    }
+    _trips[trip.id] = trip;
+    return Ok(trip);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteTrip({required String tripId}) async {
+    if (!_trips.containsKey(tripId)) {
+      return const Err(NotFoundFailure());
+    }
+    _accounts.removeWhere((_, account) => account.tripId == tripId);
+    _transactions.removeWhere((_, txn) => txn.tripId == tripId);
+    _trips.remove(tripId);
+    if (_activeTripId == tripId) _activeTripId = null;
+    return const Ok(null);
+  }
+
+  @override
+  String? getActiveTripId() => _activeTripId;
+
+  @override
+  Future<void> setActiveTripId(String? tripId) async {
+    _activeTripId = tripId;
+  }
 }

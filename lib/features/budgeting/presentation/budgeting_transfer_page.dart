@@ -3,10 +3,13 @@ import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_transaction_form_controller.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_mock_data.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_amount_section.dart';
+import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_empty_shell.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_summary_panel.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_back_button.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_bottom_action_bar.dart';
@@ -26,9 +29,8 @@ class BudgetingTransferPage extends ConsumerStatefulWidget {
 
 class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
   final amountController = TextEditingController(text: '50');
-  String selectedCurrency = mockHomeCurrency;
-  String sourceAccountId = mockDefaultAccountId;
-  String destAccountId = mockDefaultTransferDestAccountId;
+  String? sourceAccountId;
+  String? destAccountId;
 
   @override
   void dispose() {
@@ -48,9 +50,32 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
       }
     });
 
-    final currency = mockBudgetingCurrencyByCode(selectedCurrency);
-    final sourceAccount = mockBudgetingAccountById(sourceAccountId);
-    final destAccount = mockBudgetingAccountById(destAccountId);
+    final tripId = ref.watch(activeTripIdProvider);
+    final accounts =
+        ref.watch(accountsForActiveTripProvider).valueOrNull ?? const [];
+    if (accounts.length < 2 || tripId == null) {
+      return const BudgetingTransactionEmptyShell(title: 'Transfer');
+    }
+
+    sourceAccountId ??= accounts.first.id;
+    destAccountId ??=
+        accounts.firstWhere((account) => account.id != sourceAccountId).id;
+
+    final sourceAccount = accounts.firstWhere(
+      (account) => account.id == sourceAccountId,
+      orElse: () => accounts.first,
+    );
+    final destAccount = accounts.firstWhere(
+      (account) => account.id == destAccountId,
+      orElse: () => accounts.firstWhere(
+        (account) => account.id != sourceAccount.id,
+        orElse: () => accounts.first,
+      ),
+    );
+    sourceAccountId = sourceAccount.id;
+    destAccountId = destAccount.id;
+
+    final currency = budgetingCurrencyByCode(sourceAccount.currency);
     final formState = ref.watch(budgetingTransactionFormControllerProvider);
     final amount = double.tryParse(amountController.text) ?? 0;
 
@@ -61,26 +86,12 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
         child: FilledButton(
           onPressed: formState.isLoading || amount <= 0
               ? null
-              : () async {
-                  final created = await ref
-                      .read(budgetingTransactionFormControllerProvider.notifier)
-                      .createTransfer(
-                        tripId: mockTripId,
-                        sourceAccountId: sourceAccountId,
-                        destAccountId: destAccountId,
-                        amount: amount,
-                      );
-                  if (!context.mounted || !created) {
-                    return;
-                  }
-                  AppSnackBars.success(context, 'Transfer saved.');
-                  context.pop();
-                },
+              : () => _submit(tripId, sourceAccount, destAccount, amount),
           child: Text(
             formatBudgetingPrimaryAction(
               action: formState.isLoading ? 'Saving...' : 'Transfer',
               amount: amountController.text,
-              currencyCode: selectedCurrency,
+              currencyCode: sourceAccount.currency,
             ),
           ),
         ),
@@ -102,81 +113,16 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
               ),
               const Divider(),
               AppKeyValueRow(
-                label: 'Currency',
-                value: formatBudgetingCurrencyTitle(currency),
-                trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
-                onTap: () async {
-                  final result = await context.push<String>(
-                    Uri(
-                      path: AppRoutes.selectCurrency,
-                      queryParameters: {'selected': selectedCurrency},
-                    ).toString(),
-                  );
-                  if (result == null) {
-                    return;
-                  }
-                  final matchingAccount = mockBudgetingFirstAccountForCurrency(
-                    result,
-                  );
-                  final fallbackDest = mockBudgetingFirstAccountExcept(
-                    matchingAccount.id,
-                  );
-                  setState(() {
-                    selectedCurrency = result;
-                    sourceAccountId = matchingAccount.id;
-                    if (destAccountId == matchingAccount.id) {
-                      destAccountId = fallbackDest.id;
-                    }
-                  });
-                },
-              ),
-              AppKeyValueRow(
                 label: 'From',
                 value: formatBudgetingAccountTitle(sourceAccount),
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
-                onTap: () async {
-                  final result = await context.push<String>(
-                    Uri(
-                      path: AppRoutes.selectAccount,
-                      queryParameters: {
-                        'selected': sourceAccountId,
-                        'excluded': destAccountId,
-                        'title': 'Transfer from',
-                      },
-                    ).toString(),
-                  );
-                  if (result == null) {
-                    return;
-                  }
-                  final selectedAccount = mockBudgetingAccountById(result);
-                  setState(() {
-                    sourceAccountId = result;
-                    selectedCurrency = selectedAccount.currency;
-                  });
-                },
+                onTap: () => _pickSource(sourceAccount, destAccount, accounts),
               ),
               AppKeyValueRow(
                 label: 'To',
                 value: formatBudgetingAccountTitle(destAccount),
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
-                onTap: () async {
-                  final result = await context.push<String>(
-                    Uri(
-                      path: AppRoutes.selectAccount,
-                      queryParameters: {
-                        'selected': destAccountId,
-                        'excluded': sourceAccountId,
-                        'title': 'Transfer to',
-                      },
-                    ).toString(),
-                  );
-                  if (result == null) {
-                    return;
-                  }
-                  setState(() {
-                    destAccountId = result;
-                  });
-                },
+                onTap: () => _pickDest(sourceAccount, destAccount, accounts),
               ),
               const SizedBox(height: AppSpacing.lg),
               const BudgetingTransactionSummaryPanel(
@@ -189,5 +135,72 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
         ),
       ],
     );
+  }
+
+  Future<void> _submit(
+    String tripId,
+    Account source,
+    Account dest,
+    double amount,
+  ) async {
+    final created = await ref
+        .read(budgetingTransactionFormControllerProvider.notifier)
+        .createTransfer(
+          tripId: tripId,
+          sourceAccountId: source.id,
+          destAccountId: dest.id,
+          amount: amount,
+        );
+    if (!context.mounted || !created) return;
+    AppSnackBars.success(context, 'Transfer saved.');
+    context.pop();
+  }
+
+  Future<void> _pickSource(
+    Account source,
+    Account dest,
+    List<Account> accounts,
+  ) async {
+    final result = await context.push<String>(
+      Uri(
+        path: AppRoutes.selectAccount,
+        queryParameters: {
+          'selected': source.id,
+          'excluded': dest.id,
+          'title': 'Transfer from',
+        },
+      ).toString(),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      sourceAccountId = result;
+      if (result == destAccountId) {
+        destAccountId = accounts
+            .firstWhere(
+              (account) => account.id != result,
+              orElse: () => accounts.first,
+            )
+            .id;
+      }
+    });
+  }
+
+  Future<void> _pickDest(
+    Account source,
+    Account dest,
+    List<Account> accounts,
+  ) async {
+    final result = await context.push<String>(
+      Uri(
+        path: AppRoutes.selectAccount,
+        queryParameters: {
+          'selected': dest.id,
+          'excluded': source.id,
+          'title': 'Transfer to',
+        },
+      ).toString(),
+    );
+    if (result == null || !mounted) return;
+    setState(() => destAccountId = result);
   }
 }

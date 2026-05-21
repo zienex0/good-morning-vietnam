@@ -5,6 +5,7 @@ part 'budgeting_id_generator.g.dart';
 abstract interface class BudgetingIdGenerator {
   String transactionId();
   String tripId();
+  String accountId();
 }
 
 class TimestampBudgetingIdGenerator implements BudgetingIdGenerator {
@@ -15,6 +16,9 @@ class TimestampBudgetingIdGenerator implements BudgetingIdGenerator {
 
   @override
   String tripId() => 'trip-${DateTime.now().microsecondsSinceEpoch}';
+
+  @override
+  String accountId() => 'acct-${DateTime.now().microsecondsSinceEpoch}';
 }
 
 @Riverpod(keepAlive: true)

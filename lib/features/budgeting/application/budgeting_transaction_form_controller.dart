@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_foundation_kit/core/logging/logger.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_top_up_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_transfer_use_case.dart';
@@ -77,6 +78,7 @@ class BudgetingTransactionFormController
   bool handleResult(Result<Object?, Failure> result, String logMessage) {
     switch (result) {
       case Ok<Object?, Failure>():
+        invalidateBudgetingProviders(ref);
         state = const AsyncData<void>(null);
         return true;
       case Err<Object?, Failure>(failure: final failure):
