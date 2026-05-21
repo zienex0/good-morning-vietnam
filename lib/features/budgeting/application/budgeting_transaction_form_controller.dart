@@ -61,6 +61,7 @@ class BudgetingTransactionFormController
     required String sourceAccountId,
     required String destAccountId,
     required double amount,
+    double? destAmount,
   }) async {
     state = const AsyncLoading<void>();
     final result = await ref
@@ -70,6 +71,7 @@ class BudgetingTransactionFormController
           sourceAccountId: sourceAccountId,
           destAccountId: destAccountId,
           amount: amount,
+          destAmount: destAmount,
           occurredAt: DateTime.now(),
         );
     return handleResult(result, 'Transfer creation failed');

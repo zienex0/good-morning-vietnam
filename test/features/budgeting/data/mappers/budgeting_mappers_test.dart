@@ -73,6 +73,53 @@ void main() {
       expect(copy, transaction);
     });
 
+    test('Cross-currency transfer round-trips with dest snapshot', () {
+      final transaction = Transaction(
+        id: 'txn-3',
+        tripId: 'trip-1',
+        type: TransactionType.transfer,
+        occurredAt: DateTime(2026, 5, 18),
+        sourceAccountId: 'usd',
+        destAccountId: 'jpy',
+        amount: 100,
+        currency: 'USD',
+        amountHome: 100,
+        fxRate: 1,
+        destAmount: 15800,
+        destCurrency: 'JPY',
+        destFxRate: 0.0062,
+        createdAt: DateTime(2026, 5, 18),
+      );
+      final copy = transactionFromJson(transactionToJson(transaction));
+      expect(copy, transaction);
+      expect(copy.isCrossCurrencyTransfer, isTrue);
+    });
+
+    test('Legacy transfer JSON without dest fields backfills from source', () {
+      final json = <String, dynamic>{
+        'id': 'txn-legacy',
+        'tripId': 'trip-1',
+        'type': 'transfer',
+        'occurredAt': '2026-05-18T00:00:00.000',
+        'sourceAccountId': 'usd',
+        'destAccountId': 'usd2',
+        'categoryId': null,
+        'amount': 50,
+        'currency': 'USD',
+        'amountHome': 50,
+        'fxRate': 1,
+        'enteredAmount': null,
+        'enteredCurrency': null,
+        'enteredFxRate': null,
+        'note': null,
+        'createdAt': '2026-05-18T00:00:00.000',
+      };
+      final restored = transactionFromJson(json);
+      expect(restored.destAmount, 50);
+      expect(restored.destCurrency, 'USD');
+      expect(restored.destFxRate, 1);
+    });
+
     test('Simple expense round-trips', () {
       final transaction = Transaction(
         id: 'txn-2',

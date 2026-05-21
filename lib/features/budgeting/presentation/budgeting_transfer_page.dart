@@ -29,12 +29,14 @@ class BudgetingTransferPage extends ConsumerStatefulWidget {
 
 class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
   final amountController = TextEditingController(text: '50');
+  final destAmountController = TextEditingController();
   String? sourceAccountId;
   String? destAccountId;
 
   @override
   void dispose() {
     amountController.dispose();
+    destAmountController.dispose();
     super.dispose();
   }
 
@@ -76,8 +78,13 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
     destAccountId = destAccount.id;
 
     final currency = budgetingCurrencyByCode(sourceAccount.currency);
+    final destCurrency = budgetingCurrencyByCode(destAccount.currency);
     final formState = ref.watch(budgetingTransactionFormControllerProvider);
     final amount = double.tryParse(amountController.text) ?? 0;
+    final destAmountText = destAmountController.text.trim();
+    final destAmount =
+        destAmountText.isEmpty ? null : double.tryParse(destAmountText);
+    final isCrossCurrency = sourceAccount.currency != destAccount.currency;
 
     return AppSliverPage(
       title: 'Transfer',
@@ -86,7 +93,13 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
         child: FilledButton(
           onPressed: formState.isLoading || amount <= 0
               ? null
-              : () => _submit(tripId, sourceAccount, destAccount, amount),
+              : () => _submit(
+                    tripId,
+                    sourceAccount,
+                    destAccount,
+                    amount,
+                    destAmount,
+                  ),
           child: Text(
             formatBudgetingPrimaryAction(
               action: formState.isLoading ? 'Saving...' : 'Transfer',
@@ -124,6 +137,22 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
                 onTap: () => _pickDest(sourceAccount, destAccount, accounts),
               ),
+              if (isCrossCurrency) ...[
+                const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  controller: destAmountController,
+                  decoration: InputDecoration(
+                    labelText:
+                        'Received in ${destAccount.currency} (optional)',
+                    hintText:
+                        'Leave blank to use market rate at ${formatBudgetingCurrencyTitle(destCurrency)}',
+                    prefixText: '${destCurrency.symbol} ',
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               const BudgetingTransactionSummaryPanel(
                 icon: Icons.swap_horiz,
@@ -142,6 +171,7 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
     Account source,
     Account dest,
     double amount,
+    double? destAmount,
   ) async {
     final created = await ref
         .read(budgetingTransactionFormControllerProvider.notifier)
@@ -150,6 +180,7 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
           sourceAccountId: source.id,
           destAccountId: dest.id,
           amount: amount,
+          destAmount: destAmount,
         );
     if (!context.mounted || !created) return;
     AppSnackBars.success(context, 'Transfer saved.');
@@ -182,6 +213,7 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
             )
             .id;
       }
+      destAmountController.clear();
     });
   }
 
@@ -201,6 +233,9 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
       ).toString(),
     );
     if (result == null || !mounted) return;
-    setState(() => destAccountId = result);
+    setState(() {
+      destAccountId = result;
+      destAmountController.clear();
+    });
   }
 }

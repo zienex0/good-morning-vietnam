@@ -5,6 +5,7 @@ import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/convert_to_home_currency_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_top_up_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_transfer_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_trip_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/edit_trip_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/get_transaction_by_id_use_case.dart';
@@ -266,6 +267,113 @@ void main() {
       expect(daysLeft, 2);
     });
 
+    test(
+      'records a cross-currency transfer with the user-supplied received amount',
+      () async {
+        final trip = testTrip();
+        const usdAccount = Account(
+          id: 'usd',
+          tripId: 'trip-1',
+          name: 'Revolut USD',
+          type: AccountType.card,
+          currency: 'USD',
+          openingBalance: 500,
+        );
+        const jpyAccount = Account(
+          id: 'jpy',
+          tripId: 'trip-1',
+          name: 'Cash JPY',
+          type: AccountType.cash,
+          currency: 'JPY',
+          openingBalance: 0,
+        );
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          accounts: [usdAccount, jpyAccount],
+        );
+        final useCase = CreateTransferUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            PairExchangeRateRepository({'JPY:USD': 0.0062}),
+          ),
+          idGenerator: const FixedBudgetingIdGenerator(
+            fixedTransactionId: 'txn-xfer',
+          ),
+        );
+
+        final result = await useCase(
+          tripId: trip.id,
+          sourceAccountId: 'usd',
+          destAccountId: 'jpy',
+          amount: 100,
+          destAmount: 15800,
+          occurredAt: DateTime(2026, 5, 18),
+        );
+
+        final transaction = expectOk(result);
+        expect(transaction.amount, 100);
+        expect(transaction.currency, 'USD');
+        expect(transaction.destAmount, 15800);
+        expect(transaction.destCurrency, 'JPY');
+        expect(transaction.destFxRate, closeTo(0.0062, 1e-9));
+        expect(transaction.amountHome, 100);
+      },
+    );
+
+    test(
+      'computes per-account balances on each side of a cross-currency transfer',
+      () async {
+        final trip = testTrip();
+        const usdAccount = Account(
+          id: 'usd',
+          tripId: 'trip-1',
+          name: 'USD card',
+          type: AccountType.card,
+          currency: 'USD',
+          openingBalance: 500,
+        );
+        const jpyAccount = Account(
+          id: 'jpy',
+          tripId: 'trip-1',
+          name: 'JPY cash',
+          type: AccountType.cash,
+          currency: 'JPY',
+          openingBalance: 0,
+        );
+        final transfer = Transaction(
+          id: 'txn-xc',
+          tripId: 'trip-1',
+          type: TransactionType.transfer,
+          occurredAt: DateTime(2026, 5, 18),
+          sourceAccountId: 'usd',
+          destAccountId: 'jpy',
+          amount: 100,
+          currency: 'USD',
+          amountHome: 100,
+          fxRate: 1,
+          destAmount: 15800,
+          destCurrency: 'JPY',
+          destFxRate: 0.0062,
+          createdAt: DateTime(2026, 5, 18),
+        );
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          accounts: [usdAccount, jpyAccount],
+          transactions: [transfer],
+        );
+        final useCase = CalculateTotalAccountsBalanceUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            PairExchangeRateRepository({'JPY:USD': 0.0062}),
+          ),
+        );
+
+        final total = expectOk(await useCase(tripId: trip.id));
+        // 500 USD opening - 100 USD source side + 15800 * 0.0062 = 497.96
+        expect(total, closeTo(497.96, 0.001));
+      },
+    );
+
     test('creates and edits trips', () async {
       final repository = FakeBudgetingRepository();
       final created = expectOk(
@@ -351,7 +459,12 @@ Transaction testTopUp({
   );
 }
 
-Transaction testTransfer({double amountHome = 10}) {
+Transaction testTransfer({
+  double amountHome = 10,
+  double? destAmount,
+  String destCurrency = 'USD',
+  double destFxRate = 1,
+}) {
   return Transaction(
     id: 'txn-transfer',
     tripId: 'trip-1',
@@ -363,6 +476,9 @@ Transaction testTransfer({double amountHome = 10}) {
     currency: 'USD',
     amountHome: amountHome,
     fxRate: 1,
+    destAmount: destAmount ?? amountHome,
+    destCurrency: destCurrency,
+    destFxRate: destFxRate,
     createdAt: DateTime(2026),
   );
 }

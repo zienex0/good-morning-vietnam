@@ -42,12 +42,12 @@ List<SpendTrendPoint> cumulativeSpendTrend({
   return points;
 }
 
-/// Approximate native-currency balance for [accountId].
+/// Native-currency balance for [accountId].
 ///
-/// Source-side transactions deduct the recorded amount (which is already in
-/// the source account's currency by construction in the create-* use cases).
-/// Cross-currency transfers can only credit the destination using the source
-/// currency value — this is a known approximation until per-side amounts land.
+/// Source-side transactions deduct `amount` (already in source currency by
+/// construction). Transfers credit the destination using the stored
+/// `destAmount` (in dest currency), so cross-currency transfers settle on
+/// each side at the recorded rate.
 double computeAccountBalance({
   required String accountId,
   required String accountCurrency,
@@ -62,17 +62,14 @@ double computeAccountBalance({
           balance -= transaction.amount;
         }
       case TransactionType.income:
-        if (transaction.destAccountId == accountId &&
-            transaction.currency == accountCurrency) {
-          balance += transaction.amount;
-        } else if (transaction.destAccountId == accountId) {
+        if (transaction.destAccountId == accountId) {
           balance += transaction.amount;
         }
       case TransactionType.transfer:
         if (transaction.sourceAccountId == accountId) {
           balance -= transaction.amount;
         } else if (transaction.destAccountId == accountId) {
-          balance += transaction.amount;
+          balance += transaction.destAmount ?? transaction.amount;
         }
     }
   }

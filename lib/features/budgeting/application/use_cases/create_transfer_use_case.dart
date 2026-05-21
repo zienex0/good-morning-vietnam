@@ -22,17 +22,29 @@ class CreateTransferUseCase {
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
   final BudgetingIdGenerator _idGenerator;
 
+  /// Records a transfer between two accounts.
+  ///
+  /// [amount] is in the source account's currency. For cross-currency
+  /// transfers, [destAmount] is the amount actually credited to the
+  /// destination account in its native currency — pass the bank's effective
+  /// figure when known. When omitted, the use case derives it via market FX.
   Future<Result<Transaction, Failure>> call({
     required String tripId,
     required String sourceAccountId,
     required String destAccountId,
     required double amount,
     required DateTime occurredAt,
+    double? destAmount,
     String? note,
     DateTime? createdAt,
   }) async {
     if (amount <= 0) {
       return const Err(ValidationFailure('Transfer amount must be positive.'));
+    }
+    if (destAmount != null && destAmount <= 0) {
+      return const Err(
+        ValidationFailure('Received amount must be positive.'),
+      );
     }
     if (sourceAccountId == destAccountId) {
       return const Err(
@@ -75,16 +87,53 @@ class CreateTransferUseCase {
       return const Err(ValidationFailure('Accounts do not belong to trip.'));
     }
 
-    final conversionResult = await _convertToHomeCurrency(
+    // Source-side conversion to home currency.
+    final sourceConversionResult = await _convertToHomeCurrency(
       amount: amount,
       sourceCurrency: sourceAccount.currency,
       homeCurrency: trip.homeCurrency,
       date: occurredAt,
     );
-    final ({double amountHome, double fxRate}) conversion;
-    switch (conversionResult) {
+    final ({double amountHome, double fxRate}) sourceConversion;
+    switch (sourceConversionResult) {
       case Ok(value: final value):
-        conversion = value;
+        sourceConversion = value;
+      case Err(failure: final failure):
+        return Err(failure);
+    }
+
+    // Resolve the destination-side amount (user-supplied or market-converted).
+    final double resolvedDestAmount;
+    if (sourceAccount.currency == destAccount.currency) {
+      resolvedDestAmount = destAmount ?? amount;
+    } else if (destAmount != null) {
+      resolvedDestAmount = destAmount;
+    } else {
+      final crossResult = await _convertToHomeCurrency(
+        amount: amount,
+        sourceCurrency: sourceAccount.currency,
+        homeCurrency: destAccount.currency,
+        date: occurredAt,
+      );
+      switch (crossResult) {
+        case Ok(value: final value):
+          resolvedDestAmount = value.amountHome;
+        case Err(failure: final failure):
+          return Err(failure);
+      }
+    }
+
+    // Destination-side conversion to home currency.
+    final destConversionResult = await _convertToHomeCurrency(
+      amount: resolvedDestAmount,
+      sourceCurrency: destAccount.currency,
+      homeCurrency: trip.homeCurrency,
+      date: occurredAt,
+    );
+    final ({double amountHome, double fxRate}) destConversion;
+    switch (destConversionResult) {
+      case Ok(value: final value):
+        destConversion = value;
       case Err(failure: final failure):
         return Err(failure);
     }
@@ -98,8 +147,11 @@ class CreateTransferUseCase {
       destAccountId: destAccount.id,
       amount: amount,
       currency: sourceAccount.currency,
-      amountHome: conversion.amountHome,
-      fxRate: conversion.fxRate,
+      amountHome: sourceConversion.amountHome,
+      fxRate: sourceConversion.fxRate,
+      destAmount: resolvedDestAmount,
+      destCurrency: destAccount.currency,
+      destFxRate: destConversion.fxRate,
       note: note,
       createdAt: createdAt ?? DateTime.now(),
     );

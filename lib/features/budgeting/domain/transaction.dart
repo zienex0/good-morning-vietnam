@@ -32,6 +32,19 @@ class Transaction with _$Transaction {
         '(sourceAccountId != null && destAccountId != null && categoryId == null)',
     'transfer transactions need source and destination accounts only',
   )
+  @Assert(
+    '(type == TransactionType.transfer) == '
+        '(destAmount != null && destCurrency != null && destFxRate != null)',
+    'dest currency snapshot is required for transfers and forbidden otherwise',
+  )
+  @Assert(
+    'destAmount == null || destAmount > 0',
+    'destAmount must be positive',
+  )
+  @Assert(
+    'destFxRate == null || destFxRate > 0',
+    'destFxRate must be positive',
+  )
   factory Transaction({
     required String id,
     required String tripId,
@@ -47,6 +60,9 @@ class Transaction with _$Transaction {
     double? enteredAmount,
     CurrencyCode? enteredCurrency,
     double? enteredFxRate,
+    double? destAmount,
+    CurrencyCode? destCurrency,
+    double? destFxRate,
     String? note,
     required DateTime createdAt,
   }) = _Transaction;
@@ -55,4 +71,7 @@ class Transaction with _$Transaction {
   bool get isIncome => type == TransactionType.income;
   bool get isTransfer => type == TransactionType.transfer;
   bool get hasEnteredCurrency => enteredCurrency != null;
+  bool get hasDestCurrency => destCurrency != null;
+  bool get isCrossCurrencyTransfer =>
+      isTransfer && destCurrency != null && destCurrency != currency;
 }
