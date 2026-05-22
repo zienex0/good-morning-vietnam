@@ -20,15 +20,21 @@ List<SpendTrendPoint> cumulativeSpendTrend({
     if (transaction.type != TransactionType.expense) {
       continue;
     }
-    final day = budgetingDateOnly(transaction.occurredAt);
-    if (day.isBefore(start) || day.isAfter(end)) {
-      continue;
+    // Amortized expenses contribute a per-day slice across their spread window
+    // instead of one spike on the purchase day.
+    final txStart = budgetingDateOnly(transaction.occurredAt);
+    final perDay = transaction.amountHomePerDay;
+    for (var offset = 0; offset < transaction.spreadDayCount; offset++) {
+      final day = DateTime(txStart.year, txStart.month, txStart.day + offset);
+      if (day.isBefore(start) || day.isAfter(end)) {
+        continue;
+      }
+      expensesByDay.update(
+        day,
+        (value) => value + perDay,
+        ifAbsent: () => perDay,
+      );
     }
-    expensesByDay.update(
-      day,
-      (value) => value + transaction.amountHome,
-      ifAbsent: () => transaction.amountHome,
-    );
   }
 
   final points = <SpendTrendPoint>[];

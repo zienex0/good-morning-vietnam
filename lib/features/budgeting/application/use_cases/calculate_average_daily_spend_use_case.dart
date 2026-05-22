@@ -46,13 +46,14 @@ class CalculateAverageDailySpendUseCase {
         return Err(failure);
     }
 
+    // Amortized expenses only count the slice that has accrued through asOf, so
+    // a big upfront purchase does not spike the daily average.
     final totalSpend = transactions
         .where((transaction) => transaction.type == TransactionType.expense)
-        .where(
-          (transaction) =>
-              !budgetingDateOnly(transaction.occurredAt).isAfter(asOfDate),
-        )
-        .fold<double>(0, (sum, transaction) => sum + transaction.amountHome);
+        .fold<double>(
+          0,
+          (sum, transaction) => sum + transaction.amountHomeThrough(asOfDate),
+        );
     final dayCount = budgetingInclusiveDayCount(
       start: startDate,
       end: asOfDate,

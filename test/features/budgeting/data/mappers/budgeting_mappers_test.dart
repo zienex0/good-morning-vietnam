@@ -2,6 +2,7 @@ import 'package:flutter_foundation_kit/features/budgeting/data/mappers/account_m
 import 'package:flutter_foundation_kit/features/budgeting/data/mappers/transaction_mapper.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/mappers/trip_mapper.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,6 +137,51 @@ void main() {
       );
       final copy = transactionFromJson(transactionToJson(transaction));
       expect(copy, transaction);
+    });
+
+    test('Amortized expense round-trips with its spread', () {
+      final transaction = Transaction(
+        id: 'txn-airbnb',
+        tripId: 'trip-1',
+        type: TransactionType.expense,
+        occurredAt: DateTime(2026, 5, 20),
+        sourceAccountId: 'acct-1',
+        categoryId: 'lodging',
+        amount: 500,
+        currency: 'PLN',
+        amountHome: 500,
+        fxRate: 1,
+        amortization: const Amortization(unit: AmortizationUnit.days, count: 7),
+        createdAt: DateTime(2026, 5, 20),
+      );
+      final copy = transactionFromJson(transactionToJson(transaction));
+      expect(copy, transaction);
+      expect(copy.amortization, isNotNull);
+      expect(copy.spreadDayCount, 7);
+    });
+
+    test('Legacy expense JSON without amortization loads as null', () {
+      final json = <String, dynamic>{
+        'id': 'txn-legacy-expense',
+        'tripId': 'trip-1',
+        'type': 'expense',
+        'occurredAt': '2026-05-20T00:00:00.000',
+        'sourceAccountId': 'acct-1',
+        'destAccountId': null,
+        'categoryId': 'food',
+        'amount': 12,
+        'currency': 'USD',
+        'amountHome': 12,
+        'fxRate': 1,
+        'enteredAmount': null,
+        'enteredCurrency': null,
+        'enteredFxRate': null,
+        'note': null,
+        'createdAt': '2026-05-20T00:00:00.000',
+      };
+      final restored = transactionFromJson(json);
+      expect(restored.amortization, isNull);
+      expect(restored.isAmortized, isFalse);
     });
   });
 }

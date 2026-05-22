@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 
@@ -53,4 +54,10 @@ String budgetingTripStatusLabel(TripStatus status) => switch (status) {
   TripStatus.planning => 'planning',
   TripStatus.active => 'active',
   TripStatus.ended => 'ended',
+};
+
+String budgetingAmortizationUnitLabel(AmortizationUnit unit) => switch (unit) {
+  AmortizationUnit.days => 'Days',
+  AmortizationUnit.weeks => 'Weeks',
+  AmortizationUnit.months => 'Months',
 };

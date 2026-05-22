@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_form_page.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_selection_page.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_accounts_page.dart';
+import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_amortization_selection_page.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_currency_selection_page.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_expense_page.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_home_page.dart';
@@ -148,6 +150,22 @@ GoRouter appRouter(AppRouterRef ref) {
           selectedAccountId: state.uri.queryParameters['selected'] ?? '',
           excludedAccountId: state.uri.queryParameters['excluded'],
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.selectAmortization,
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          return BudgetingAmortizationSelectionPage(
+            enabled: params['enabled'] == 'true',
+            unit: AmortizationUnit.values.firstWhere(
+              (value) => value.name == params['unit'],
+              orElse: () => AmortizationUnit.days,
+            ),
+            count: int.tryParse(params['count'] ?? '') ?? 7,
+            amount: double.tryParse(params['amount'] ?? ''),
+            currency: params['currency'],
+          );
+        },
       ),
     ],
   );

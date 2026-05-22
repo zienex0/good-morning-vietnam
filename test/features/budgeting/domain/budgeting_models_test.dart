@@ -1,4 +1,5 @@
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/category.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
@@ -97,11 +98,87 @@ void main() {
         currency: 'JPY',
         amountHome: 62,
         fxRate: 0.0062,
+        destAmount: 10000,
+        destCurrency: 'JPY',
+        destFxRate: 0.0062,
         createdAt: DateTime(2026, 5, 20, 10, 1),
       );
 
       expect(transaction.categoryId, isNull);
       expect(transaction.isTransfer, isTrue);
+    });
+
+    test('a plain expense contributes its full amount to one day', () {
+      final transaction = Transaction(
+        id: 'transaction-3',
+        tripId: 'trip-1',
+        type: TransactionType.expense,
+        occurredAt: DateTime(2026, 5, 9, 14),
+        sourceAccountId: 'account-1',
+        categoryId: 'food',
+        amount: 70,
+        currency: 'USD',
+        amountHome: 70,
+        fxRate: 1,
+        createdAt: DateTime(2026, 5, 9),
+      );
+
+      expect(transaction.isAmortized, isFalse);
+      expect(transaction.spreadDayCount, 1);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 9)), 70);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 10)), 0);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 8)), 0);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 9)), 70);
+    });
+
+    test('an amortized expense spreads evenly across its window', () {
+      final transaction = Transaction(
+        id: 'transaction-4',
+        tripId: 'trip-1',
+        type: TransactionType.expense,
+        occurredAt: DateTime(2026, 5, 9, 14),
+        sourceAccountId: 'account-1',
+        categoryId: 'lodging',
+        amount: 70,
+        currency: 'USD',
+        amountHome: 70,
+        fxRate: 1,
+        amortization: const Amortization(unit: AmortizationUnit.days, count: 7),
+        createdAt: DateTime(2026, 5, 9),
+      );
+
+      expect(transaction.isAmortized, isTrue);
+      expect(transaction.spreadDayCount, 7);
+      expect(transaction.amountHomePerDay, 10);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 8)), 0);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 9)), 10);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 15)), 10);
+      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 16)), 0);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 8)), 0);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 9)), 10);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 12)), 40);
+      expect(transaction.amountHomeThrough(DateTime(2026, 5, 30)), 70);
+    });
+  });
+
+  group('Amortization', () {
+    test('resolves days and weeks to a flat day count', () {
+      const days = Amortization(unit: AmortizationUnit.days, count: 7);
+      const weeks = Amortization(unit: AmortizationUnit.weeks, count: 2);
+
+      expect(days.dayCountFrom(DateTime(2026, 5, 9)), 7);
+      expect(weeks.dayCountFrom(DateTime(2026, 5, 9)), 14);
+    });
+
+    test('resolves months against the start date so length is calendar '
+        'accurate', () {
+      const oneMonth = Amortization(unit: AmortizationUnit.months, count: 1);
+      const twoMonths = Amortization(unit: AmortizationUnit.months, count: 2);
+
+      // March has 31 days.
+      expect(oneMonth.dayCountFrom(DateTime(2026, 3, 15)), 31);
+      // March (31) + April (30).
+      expect(twoMonths.dayCountFrom(DateTime(2026, 3, 15)), 61);
     });
   });
 }

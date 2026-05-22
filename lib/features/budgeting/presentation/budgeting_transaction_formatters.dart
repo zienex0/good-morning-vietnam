@@ -1,5 +1,6 @@
 import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_date_math.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
@@ -104,7 +105,10 @@ String formatTransactionRowDetail({
           : budgetingCategoryById(transaction.categoryId!);
       final categoryName = category?.name ?? 'Expense';
       final accountSuffix = account == null ? '' : ' · ${account.name}';
-      return '$categoryName$accountSuffix · $dateLabel';
+      final spreadSuffix = transaction.isAmortized
+          ? ' · ${transaction.spreadDayCount}d spread'
+          : '';
+      return '$categoryName$accountSuffix · $dateLabel$spreadSuffix';
     case TransactionType.income:
       final accountSuffix = account == null ? '' : ' · ${account.name}';
       return 'Top up$accountSuffix · $dateLabel';
@@ -140,4 +144,49 @@ String formatTransactionRowAmount({
     TransactionType.transfer => '',
   };
   return '$sign${formatBudgetingHomeMoney(transaction.amountHome, homeCurrency)}';
+}
+
+String formatAmortizationRowValue(Amortization? amortization) {
+  if (amortization == null) {
+    return 'Not spread';
+  }
+  final unit = amortization.unit.name;
+  final singular = unit.substring(0, unit.length - 1);
+  return '${amortization.count} ${amortization.count == 1 ? singular : unit}';
+}
+
+String formatAmortizationPreview({
+  required double amount,
+  required CurrencyCode currency,
+  required Amortization amortization,
+}) {
+  final days = amortization.dayCountFrom(DateTime.now());
+  if (days <= 0 || amount <= 0) {
+    return '';
+  }
+  final perDay = amount / days;
+  return '≈ ${formatBudgetingNativeMoney(perDay, currency)}/day for $days days';
+}
+
+String encodeAmortizationResult(Amortization? amortization) {
+  if (amortization == null) {
+    return 'none';
+  }
+  return '${amortization.unit.name}:${amortization.count}';
+}
+
+Amortization? decodeAmortizationResult(String? raw) {
+  if (raw == null || raw.isEmpty || raw == 'none') {
+    return null;
+  }
+  final parts = raw.split(':');
+  if (parts.length != 2) {
+    return null;
+  }
+  final unit = AmortizationUnit.values.firstWhere(
+    (value) => value.name == parts[0],
+    orElse: () => AmortizationUnit.days,
+  );
+  final count = int.tryParse(parts[1]) ?? 1;
+  return Amortization(unit: unit, count: count < 1 ? 1 : count);
 }

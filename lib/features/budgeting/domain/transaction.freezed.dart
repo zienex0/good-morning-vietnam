@@ -35,6 +35,7 @@ mixin _$Transaction {
   String? get destCurrency => throw _privateConstructorUsedError;
   double? get destFxRate => throw _privateConstructorUsedError;
   String? get note => throw _privateConstructorUsedError;
+  Amortization? get amortization => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
 
   /// Create a copy of Transaction
@@ -70,8 +71,11 @@ abstract class $TransactionCopyWith<$Res> {
     String? destCurrency,
     double? destFxRate,
     String? note,
+    Amortization? amortization,
     DateTime createdAt,
   });
+
+  $AmortizationCopyWith<$Res>? get amortization;
 }
 
 /// @nodoc
@@ -107,6 +111,7 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
     Object? destCurrency = freezed,
     Object? destFxRate = freezed,
     Object? note = freezed,
+    Object? amortization = freezed,
     Object? createdAt = null,
   }) {
     return _then(
@@ -183,6 +188,10 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
                 ? _value.note
                 : note // ignore: cast_nullable_to_non_nullable
                       as String?,
+            amortization: freezed == amortization
+                ? _value.amortization
+                : amortization // ignore: cast_nullable_to_non_nullable
+                      as Amortization?,
             createdAt: null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -190,6 +199,20 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of Transaction
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AmortizationCopyWith<$Res>? get amortization {
+    if (_value.amortization == null) {
+      return null;
+    }
+
+    return $AmortizationCopyWith<$Res>(_value.amortization!, (value) {
+      return _then(_value.copyWith(amortization: value) as $Val);
+    });
   }
 }
 
@@ -221,8 +244,12 @@ abstract class _$$TransactionImplCopyWith<$Res>
     String? destCurrency,
     double? destFxRate,
     String? note,
+    Amortization? amortization,
     DateTime createdAt,
   });
+
+  @override
+  $AmortizationCopyWith<$Res>? get amortization;
 }
 
 /// @nodoc
@@ -257,6 +284,7 @@ class __$$TransactionImplCopyWithImpl<$Res>
     Object? destCurrency = freezed,
     Object? destFxRate = freezed,
     Object? note = freezed,
+    Object? amortization = freezed,
     Object? createdAt = null,
   }) {
     return _then(
@@ -333,6 +361,10 @@ class __$$TransactionImplCopyWithImpl<$Res>
             ? _value.note
             : note // ignore: cast_nullable_to_non_nullable
                   as String?,
+        amortization: freezed == amortization
+            ? _value.amortization
+            : amortization // ignore: cast_nullable_to_non_nullable
+                  as Amortization?,
         createdAt: null == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -364,6 +396,7 @@ class _$TransactionImpl extends _Transaction {
     this.destCurrency,
     this.destFxRate,
     this.note,
+    this.amortization,
     required this.createdAt,
   }) : assert(amount > 0, 'amount must be positive'),
        assert(amountHome > 0, 'amountHome must be positive'),
@@ -400,9 +433,7 @@ class _$TransactionImpl extends _Transaction {
        ),
        assert(
          (type == TransactionType.transfer) ==
-             (destAmount != null &&
-                 destCurrency != null &&
-                 destFxRate != null),
+             (destAmount != null && destCurrency != null && destFxRate != null),
          'dest currency snapshot is required for transfers and forbidden otherwise',
        ),
        assert(
@@ -412,6 +443,10 @@ class _$TransactionImpl extends _Transaction {
        assert(
          destFxRate == null || destFxRate > 0,
          'destFxRate must be positive',
+       ),
+       assert(
+         amortization == null || type == TransactionType.expense,
+         'only expenses can be amortized',
        ),
        super._();
 
@@ -452,11 +487,13 @@ class _$TransactionImpl extends _Transaction {
   @override
   final String? note;
   @override
+  final Amortization? amortization;
+  @override
   final DateTime createdAt;
 
   @override
   String toString() {
-    return 'Transaction(id: $id, tripId: $tripId, type: $type, occurredAt: $occurredAt, sourceAccountId: $sourceAccountId, destAccountId: $destAccountId, categoryId: $categoryId, amount: $amount, currency: $currency, amountHome: $amountHome, fxRate: $fxRate, enteredAmount: $enteredAmount, enteredCurrency: $enteredCurrency, enteredFxRate: $enteredFxRate, destAmount: $destAmount, destCurrency: $destCurrency, destFxRate: $destFxRate, note: $note, createdAt: $createdAt)';
+    return 'Transaction(id: $id, tripId: $tripId, type: $type, occurredAt: $occurredAt, sourceAccountId: $sourceAccountId, destAccountId: $destAccountId, categoryId: $categoryId, amount: $amount, currency: $currency, amountHome: $amountHome, fxRate: $fxRate, enteredAmount: $enteredAmount, enteredCurrency: $enteredCurrency, enteredFxRate: $enteredFxRate, destAmount: $destAmount, destCurrency: $destCurrency, destFxRate: $destFxRate, note: $note, amortization: $amortization, createdAt: $createdAt)';
   }
 
   @override
@@ -494,12 +531,14 @@ class _$TransactionImpl extends _Transaction {
             (identical(other.destFxRate, destFxRate) ||
                 other.destFxRate == destFxRate) &&
             (identical(other.note, note) || other.note == note) &&
+            (identical(other.amortization, amortization) ||
+                other.amortization == amortization) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt));
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     tripId,
@@ -519,8 +558,9 @@ class _$TransactionImpl extends _Transaction {
     destCurrency,
     destFxRate,
     note,
+    amortization,
     createdAt,
-  );
+  ]);
 
   /// Create a copy of Transaction
   /// with the given fields replaced by the non-null parameter values.
@@ -551,6 +591,7 @@ abstract class _Transaction extends Transaction {
     final String? destCurrency,
     final double? destFxRate,
     final String? note,
+    final Amortization? amortization,
     required final DateTime createdAt,
   }) = _$TransactionImpl;
   _Transaction._() : super._();
@@ -591,6 +632,8 @@ abstract class _Transaction extends Transaction {
   double? get destFxRate;
   @override
   String? get note;
+  @override
+  Amortization? get amortization;
   @override
   DateTime get createdAt;
 

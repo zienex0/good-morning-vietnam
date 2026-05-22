@@ -1,3 +1,4 @@
+import 'package:flutter_foundation_kit/features/budgeting/data/mappers/amortization_mapper.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 
 Map<String, dynamic> transactionToJson(Transaction transaction) {
@@ -20,6 +21,9 @@ Map<String, dynamic> transactionToJson(Transaction transaction) {
     'destCurrency': transaction.destCurrency,
     'destFxRate': transaction.destFxRate,
     'note': transaction.note,
+    'amortization': transaction.amortization == null
+        ? null
+        : amortizationToJson(transaction.amortization!),
     'createdAt': transaction.createdAt.toIso8601String(),
   };
 }
@@ -65,6 +69,9 @@ Transaction transactionFromJson(Map<String, dynamic> json) {
     destCurrency: destCurrency,
     destFxRate: destFxRate,
     note: json['note'] as String?,
+    amortization: json['amortization'] == null
+        ? null
+        : amortizationFromJson(json['amortization'] as Map<String, dynamic>),
     createdAt: DateTime.parse(json['createdAt'] as String),
   );
 }
