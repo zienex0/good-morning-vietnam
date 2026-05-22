@@ -6,6 +6,7 @@ import 'package:flutter_foundation_kit/features/budgeting/application/active_tri
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_top_up_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_transfer_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'budgeting_transaction_form_controller.g.dart';
@@ -41,6 +42,7 @@ class BudgetingTransactionFormController
     required String categoryId,
     required double amount,
     String? amountCurrency,
+    Amortization? amortization,
   }) async {
     state = const AsyncLoading<void>();
     final result = await ref
@@ -51,6 +53,7 @@ class BudgetingTransactionFormController
           categoryId: categoryId,
           amount: amount,
           amountCurrency: amountCurrency,
+          amortization: amortization,
           occurredAt: DateTime.now(),
         );
     return handleResult(result, 'Expense creation failed');

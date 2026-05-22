@@ -3,6 +3,7 @@ import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -30,6 +31,7 @@ class CreateExpenseUseCase {
     required DateTime occurredAt,
     CurrencyCode? amountCurrency,
     String? note,
+    Amortization? amortization,
     DateTime? createdAt,
   }) async {
     if (amount <= 0) {
@@ -114,6 +116,7 @@ class CreateExpenseUseCase {
           ? null
           : accountConversion.fxRate,
       note: note,
+      amortization: amortization,
       createdAt: createdAt ?? DateTime.now(),
     );
 

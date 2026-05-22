@@ -6,6 +6,7 @@ import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_transaction_form_controller.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
@@ -33,6 +34,7 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
   String? selectedAccountId;
   String? enteredCurrency;
   String selectedCategoryId = kBudgetingDefaultCategories.first.id;
+  Amortization? amortization;
 
   @override
   void dispose() {
@@ -118,6 +120,12 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
                 onTap: _pickCurrency,
               ),
+              AppKeyValueRow(
+                label: 'Spread over',
+                value: formatAmortizationRowValue(amortization),
+                trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
+                onTap: _pickAmortization,
+              ),
               const SizedBox(height: AppSpacing.lg),
               Text('Category', style: context.labelStrong),
               const SizedBox(height: AppSpacing.md),
@@ -143,6 +151,7 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
           categoryId: selectedCategoryId,
           amount: amount,
           amountCurrency: enteredCurrency,
+          amortization: amortization,
         );
     if (!context.mounted || !created) return;
     AppSnackBars.success(context, 'Expense saved.');
@@ -184,5 +193,22 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
     );
     if (result == null || !mounted) return;
     setState(() => enteredCurrency = result);
+  }
+
+  Future<void> _pickAmortization() async {
+    final result = await context.push<String>(
+      Uri(
+        path: AppRoutes.selectAmortization,
+        queryParameters: {
+          'enabled': (amortization != null).toString(),
+          if (amortization != null) 'unit': amortization!.unit.name,
+          if (amortization != null) 'count': amortization!.count.toString(),
+          'amount': amountController.text,
+          'currency': enteredCurrency!,
+        },
+      ).toString(),
+    );
+    if (result == null || !mounted) return;
+    setState(() => amortization = decodeAmortizationResult(result));
   }
 }

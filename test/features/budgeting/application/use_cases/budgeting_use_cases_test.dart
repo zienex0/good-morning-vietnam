@@ -14,6 +14,7 @@ import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_gene
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/exchange_rate.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
@@ -231,6 +232,112 @@ void main() {
       expect(average, 25);
     });
 
+    test('persists amortization on a spread expense', () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'account-1',
+        tripId: 'trip-1',
+        name: 'USD cash',
+        type: AccountType.cash,
+        currency: 'USD',
+        openingBalance: 0,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [account],
+      );
+      final useCase = CreateExpenseUseCase(
+        repository: repository,
+        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+          FakeExchangeRateRepository(rate: 1),
+        ),
+        idGenerator: const FixedBudgetingIdGenerator(
+          fixedTransactionId: 'txn-airbnb',
+        ),
+      );
+
+      final transaction = expectOk(
+        await useCase(
+          tripId: trip.id,
+          accountId: account.id,
+          categoryId: 'lodging',
+          amount: 500,
+          occurredAt: DateTime(2026, 5, 20),
+          amortization: const Amortization(
+            unit: AmortizationUnit.days,
+            count: 7,
+          ),
+        ),
+      );
+
+      expect(transaction.isAmortized, isTrue);
+      expect(transaction.spreadDayCount, 7);
+      expect(transaction.amountHome, 500);
+    });
+
+    test('average daily spend uses only the elapsed slice of a spread '
+        'expense', () async {
+      final trip = testTrip();
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        transactions: [
+          // 70 spread over 7 days from the trip start day.
+          testExpense(
+            amountHome: 70,
+            amortization: const Amortization(
+              unit: AmortizationUnit.days,
+              count: 7,
+            ),
+          ),
+        ],
+      );
+
+      final average = expectOk(
+        await CalculateAverageDailySpendUseCase(repository)(
+          tripId: trip.id,
+          asOf: DateTime(2026, 5, 9, 23),
+        ),
+      );
+
+      // One day elapsed: 10 accrued / 1 day, not the full 70.
+      expect(average, 10);
+    });
+
+    test('amortized expense still deducts the full amount from balance', () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'usd',
+        tripId: 'trip-1',
+        name: 'USD cash',
+        type: AccountType.cash,
+        currency: 'USD',
+        openingBalance: 500,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [account],
+        transactions: [
+          testExpense(
+            amountHome: 70,
+            amortization: const Amortization(
+              unit: AmortizationUnit.days,
+              count: 7,
+            ),
+          ),
+        ],
+      );
+      final useCase = CalculateTotalAccountsBalanceUseCase(
+        repository: repository,
+        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+          FakeExchangeRateRepository(rate: 1),
+        ),
+      );
+
+      final total = expectOk(await useCase(tripId: trip.id));
+
+      expect(total, 430);
+    });
+
     test('calculates days left from balance and average spend', () async {
       final trip = testTrip();
       const account = Account(
@@ -424,6 +531,7 @@ Transaction testExpense({
   String sourceAccountId = 'usd',
   double amountHome = 10,
   DateTime? occurredAt,
+  Amortization? amortization,
 }) {
   return Transaction(
     id: id,
@@ -436,6 +544,7 @@ Transaction testExpense({
     currency: 'USD',
     amountHome: amountHome,
     fxRate: 1,
+    amortization: amortization,
     createdAt: DateTime(2026),
   );
 }

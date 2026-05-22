@@ -1,3 +1,4 @@
+import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -45,6 +46,10 @@ class Transaction with _$Transaction {
     'destFxRate == null || destFxRate > 0',
     'destFxRate must be positive',
   )
+  @Assert(
+    'amortization == null || type == TransactionType.expense',
+    'only expenses can be amortized',
+  )
   factory Transaction({
     required String id,
     required String tripId,
@@ -64,6 +69,7 @@ class Transaction with _$Transaction {
     CurrencyCode? destCurrency,
     double? destFxRate,
     String? note,
+    Amortization? amortization,
     required DateTime createdAt,
   }) = _Transaction;
 
@@ -74,4 +80,46 @@ class Transaction with _$Transaction {
   bool get hasDestCurrency => destCurrency != null;
   bool get isCrossCurrencyTransfer =>
       isTransfer && destCurrency != null && destCurrency != currency;
+
+  bool get isAmortized => amortization != null;
+
+  /// Number of days this expense is spread across (1 when not amortized).
+  int get spreadDayCount => amortization?.dayCountFrom(occurredAt) ?? 1;
+
+  /// Home-currency amount attributed to a single day of the spread window.
+  double get amountHomePerDay => amountHome / spreadDayCount;
+
+  /// Home-currency amount this expense contributes to the calendar day [day].
+  double amountHomeOnDay(DateTime day) {
+    final start = DateTime(occurredAt.year, occurredAt.month, occurredAt.day);
+    final target = DateTime(day.year, day.month, day.day);
+    final span = spreadDayCount;
+    if (span <= 1) {
+      return target == start ? amountHome : 0;
+    }
+    final offset = target.difference(start).inDays;
+    if (offset < 0 || offset >= span) {
+      return 0;
+    }
+    return amountHomePerDay;
+  }
+
+  /// Home-currency amount that has accrued on or before [asOf]. Returns 0 for a
+  /// fully future expense and the full amount once the spread window is over.
+  double amountHomeThrough(DateTime asOf) {
+    final start = DateTime(occurredAt.year, occurredAt.month, occurredAt.day);
+    final asOfDate = DateTime(asOf.year, asOf.month, asOf.day);
+    final span = spreadDayCount;
+    if (span <= 1) {
+      return asOfDate.isBefore(start) ? 0 : amountHome;
+    }
+    final elapsed = asOfDate.difference(start).inDays + 1;
+    if (elapsed <= 0) {
+      return 0;
+    }
+    if (elapsed >= span) {
+      return amountHome;
+    }
+    return amountHomePerDay * elapsed;
+  }
 }
