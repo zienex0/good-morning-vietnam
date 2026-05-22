@@ -44,14 +44,9 @@ class BudgetingAccountsSummarySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppSectionHeader(
-          title: 'accounts',
-          body: 'Balances are approximate in each account currency.',
-        ),
-        const SizedBox(height: AppSpacing.lg),
         for (final account in accounts) ...[
           BudgetingAccountTile(account: account, transactions: transactions),
-          const Divider(),
+          const SizedBox(height: AppSpacing.pageWithinSectionGap),
         ],
       ],
     );
@@ -98,21 +93,14 @@ class BudgetingAccountTile extends StatelessWidget {
       openingBalance: account.openingBalance,
       transactions: transactions,
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: AppIconTextTile(
-        leading: CircleAvatar(
-          backgroundColor: AppColors.surfaceRaised,
-          foregroundColor: AppColors.textPrimary,
-          child: Icon(budgetingAccountIcon(account.type)),
-        ),
-        title: account.name,
-        subtitle:
-            '${budgetingAccountTypeLabel(account.type)} · ${account.currency}',
-        trailing: Text(
-          formatBudgetingNativeMoney(balance, account.currency),
-          style: context.text.bodyLarge,
-        ),
+    return AppIconTextTile(
+      leading: Icon(budgetingAccountIcon(account.type)),
+      title: account.name,
+      subtitle:
+          '${budgetingAccountTypeLabel(account.type)} · ${account.currency}',
+      trailing: Text(
+        formatBudgetingNativeMoney(balance, account.currency),
+        style: context.text.bodyLarge,
       ),
     );
   }

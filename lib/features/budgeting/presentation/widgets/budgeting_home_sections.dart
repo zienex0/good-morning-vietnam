@@ -8,7 +8,10 @@ import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dar
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_mappers.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_icon_text_tile.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_key_value_row.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_trend_chart.dart';
+import 'package:flutter_foundation_kit/shared/widgets/empty_state.dart';
 import 'package:flutter_foundation_kit/shared/widgets/section_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,17 +25,16 @@ class BudgetingHomeHero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final daysLeft = ref.watch(activeTripDaysLeftProvider).valueOrNull;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(formatDaysLeftHeadline(daysLeft), style: context.headlineStrong),
-        const SizedBox(height: AppSpacing.xs),
+        Text(formatDaysLeftHeadline(daysLeft), style: context.displayStrong),
         Text(
           formatDaysLeftSubtitle(daysLeft),
-          style: context.secondaryText.bodyLarge,
+          style: context.secondaryText.headlineSmall,
         ),
-        const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.pageBetweenSectionGap),
         BudgetingMetricStrip(trip: trip),
-        const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.pageBetweenSectionGap),
         BudgetingProgressPanel(trip: trip),
       ],
     );
@@ -50,42 +52,18 @@ class BudgetingMetricStrip extends ConsumerWidget {
     final avgSpend =
         ref.watch(activeTripAverageDailySpendProvider).valueOrNull ?? 0;
     final dayLabel = formatTripDayLabel(trip, DateTime.now());
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.md,
+    return Column(
       children: [
-        BudgetingMetricPill(
-          icon: Icons.account_balance_wallet_outlined,
-          label: formatBudgetingHomeMoney(balance, trip.homeCurrency),
+        AppKeyValueRow(
+          label: 'Balance',
+          value: formatBudgetingHomeMoney(balance, trip.homeCurrency),
         ),
-        BudgetingMetricPill(
-          icon: Icons.local_fire_department_outlined,
-          label: '${formatBudgetingHomeMoney(avgSpend, trip.homeCurrency)}/day',
+        AppKeyValueRow(
+          label: 'Avg daily spend',
+          value: formatBudgetingHomeMoney(avgSpend, trip.homeCurrency),
         ),
-        BudgetingMetricPill(
-          icon: Icons.calendar_today_outlined,
-          label: dayLabel,
-        ),
+        AppKeyValueRow(label: 'Currently at', value: dayLabel),
       ],
-    );
-  }
-}
-
-class BudgetingMetricPill extends StatelessWidget {
-  const BudgetingMetricPill({
-    required this.icon,
-    required this.label,
-    super.key,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: AppSizes.iconSm),
-      label: Text(label),
     );
   }
 }
@@ -221,27 +199,22 @@ class BudgetingTransactionsSection extends ConsumerWidget {
         ref.watch(transactionsForActiveTripProvider).valueOrNull ?? const [];
     final accounts =
         ref.watch(accountsForActiveTripProvider).valueOrNull ?? const [];
-    final recent = transactions.take(8).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppSectionHeader(title: 'transactions'),
-        const SizedBox(height: AppSpacing.md),
-        if (recent.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(
-              'No transactions yet. Use the buttons above to add one.',
-              style: context.mutedText.bodyMedium,
-            ),
+        if (transactions.isEmpty)
+          const EmptyState(
+            icon: Icons.close,
+            title: 'No transactions yet',
+            description: 'List of transactions will appear here',
           )
         else
-          for (final transaction in recent) ...[
+          for (final transaction in transactions) ...[
             BudgetingTransactionTile(
               transaction: transaction,
               account: _accountFor(transaction, accounts),
             ),
-            const Divider(),
+            const SizedBox(height: AppSpacing.pageWithinSectionGap),
           ],
       ],
     );
@@ -271,56 +244,31 @@ class BudgetingTransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = transaction.type == TransactionType.income;
     final accountAmount = formatTransactionRowAccountAmount(transaction);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
+    return AppIconTextTile(
+      leading: CircleAvatar(
+        backgroundColor: AppColors.surfaceRaised,
+        foregroundColor: AppColors.textPrimary,
+        child: Icon(budgetingTransactionIcon(transaction)),
+      ),
+      title: formatTransactionRowTitle(transaction),
+      subtitle: formatTransactionRowDetail(
+        transaction: transaction,
+        account: account,
+      ),
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.surfaceRaised,
-            foregroundColor: AppColors.textPrimary,
-            child: Icon(budgetingTransactionIcon(transaction)),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  formatTransactionRowTitle(transaction),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.text.bodyLarge,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  formatTransactionRowDetail(
-                    transaction: transaction,
-                    account: account,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.mutedText.bodyMedium,
-                ),
-              ],
+          Text(
+            formatTransactionRowAmount(transaction: transaction),
+            style: context.text.bodyLarge?.copyWith(
+              color: isIncome ? AppColors.success : AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                formatTransactionRowAmount(transaction: transaction),
-                style: context.text.bodyLarge?.copyWith(
-                  color: isIncome ? AppColors.success : AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (accountAmount != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(accountAmount, style: context.mutedText.bodySmall),
-              ],
-            ],
-          ),
+          if (accountAmount != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(accountAmount, style: context.mutedText.bodySmall),
+          ],
         ],
       ),
     );

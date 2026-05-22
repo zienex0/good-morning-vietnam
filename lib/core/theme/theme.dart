@@ -382,6 +382,11 @@ extension AppThemeContext on BuildContext {
   TextStyle? get headlineStrong =>
       text.headlineMedium?.copyWith(fontWeight: FontWeight.w800);
 
+  TextStyle? get displayStrong => text.headlineMedium?.copyWith(
+    fontWeight: FontWeight.w800,
+    fontSize: _unit * 16,
+  );
+
   TextStyle? get titleStrong =>
       text.titleLarge?.copyWith(fontWeight: FontWeight.w800);
 

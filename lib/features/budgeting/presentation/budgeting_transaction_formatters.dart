@@ -82,9 +82,9 @@ String formatDaysLeftSubtitle(int? daysLeft) {
     return 'Track an expense to see runway.';
   }
   if (daysLeft <= 0) {
-    return "you're out of runway.";
+    return "You're done";
   }
-  return "before you're sleeping...";
+  return 'Until dead 💀';
 }
 
 String formatTripDateRange(Trip trip) {

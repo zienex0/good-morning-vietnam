@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_home_sections.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_page_frame.dart';
+import 'package:flutter_foundation_kit/shared/widgets/async_value_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BudgetingHomePage extends ConsumerWidget {
@@ -9,18 +10,25 @@ class BudgetingHomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final trip = ref.watch(activeTripProvider).valueOrNull;
-    if (trip == null) {
-      return const BudgetingPageFrame(title: 'Loading...', children: []);
-    }
-    return BudgetingPageFrame(
-      title: trip.name,
-      children: [
-        BudgetingHomeHero(trip: trip),
-        const BudgetingHomeActions(),
-        const BudgetingSpendTrendSection(),
-        const BudgetingTransactionsSection(),
-      ],
+    final tripAsync = ref.watch(activeTripProvider);
+
+    return AsyncValueView(
+      value: tripAsync,
+      onRetry: () => ref.invalidate(activeTripProvider),
+      data: (trip) {
+        if (trip == null) {
+          return const BudgetingPageFrame(title: 'Loading...', children: []);
+        }
+        return BudgetingPageFrame(
+          title: trip.name,
+          children: [
+            BudgetingHomeHero(trip: trip),
+            const BudgetingHomeActions(),
+            const BudgetingSpendTrendSection(),
+            const BudgetingTransactionsSection(),
+          ],
+        );
+      },
     );
   }
 }
