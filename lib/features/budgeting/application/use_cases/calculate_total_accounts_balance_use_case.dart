@@ -83,11 +83,15 @@ class CalculateTotalAccountsBalanceUseCase {
           final destinationIsActive = activeAccountIds.contains(
             transaction.destAccountId,
           );
-          if (sourceIsActive && !destinationIsActive) {
+          final destHome = transaction.destAmount == null ||
+                  transaction.destFxRate == null
+              ? transaction.amountHome
+              : transaction.destAmount! * transaction.destFxRate!;
+          if (sourceIsActive) {
             total -= transaction.amountHome;
           }
-          if (!sourceIsActive && destinationIsActive) {
-            total += transaction.amountHome;
+          if (destinationIsActive) {
+            total += destHome;
           }
       }
     }

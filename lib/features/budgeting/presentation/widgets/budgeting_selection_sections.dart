@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_mock_data.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
+import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_mappers.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_icon_text_tile.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class BudgetingCurrencyChips extends StatelessWidget {
@@ -21,7 +25,7 @@ class BudgetingCurrencyChips extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final currency in mockBudgetingCurrencies) ...[
+          for (final currency in kBudgetingCurrencyCatalog) ...[
             ChoiceChip(
               selected: selectedCurrency == currency.code,
               avatar: Text(currency.flag),
@@ -50,7 +54,7 @@ class BudgetingCurrencyList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (final currency in mockBudgetingCurrencies) ...[
+        for (final currency in kBudgetingCurrencyCatalog) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             child: AppIconTextTile(
@@ -75,7 +79,7 @@ class BudgetingCurrencyList extends StatelessWidget {
   }
 }
 
-class BudgetingAccountList extends StatelessWidget {
+class BudgetingAccountList extends ConsumerWidget {
   const BudgetingAccountList({
     required this.selectedAccountId,
     required this.onSelected,
@@ -88,24 +92,36 @@ class BudgetingAccountList extends StatelessWidget {
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    final accounts = mockBudgetingAccounts
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(accountsForActiveTripProvider).valueOrNull ??
+        const <Account>[];
+    final visible = accounts
         .where((account) => account.id != excludedAccountId)
         .toList();
 
+    if (visible.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Text(
+          'No accounts in this trip yet.',
+          style: context.mutedText.bodyMedium,
+        ),
+      );
+    }
+
     return Column(
       children: [
-        for (final account in accounts) ...[
+        for (final account in visible) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             child: AppIconTextTile(
               leading: CircleAvatar(
                 backgroundColor: AppColors.surfaceRaised,
                 foregroundColor: AppColors.textPrimary,
-                child: Icon(account.icon),
+                child: Icon(budgetingAccountIcon(account.type)),
               ),
               title: formatBudgetingAccountTitle(account),
-              subtitle: '${account.detail} • ${account.balance}',
+              subtitle: budgetingAccountTypeLabel(account.type),
               trailing: Icon(
                 selectedAccountId == account.id
                     ? Icons.radio_button_checked

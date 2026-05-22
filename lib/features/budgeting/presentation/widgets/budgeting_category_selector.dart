@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_mock_data.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/categories.dart';
+import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_mappers.dart';
 
 class BudgetingCategorySelector extends StatelessWidget {
   const BudgetingCategorySelector({
@@ -18,10 +19,13 @@ class BudgetingCategorySelector extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        for (final category in mockBudgetingCategories)
+        for (final category in kBudgetingDefaultCategories)
           ChoiceChip(
             selected: selectedCategoryId == category.id,
-            avatar: Icon(category.icon, size: AppSizes.iconSm),
+            avatar: Icon(
+              budgetingCategoryIcon(category.id),
+              size: AppSizes.iconSm,
+            ),
             label: Text(category.name),
             onSelected: (_) => onSelected(category.id),
           ),

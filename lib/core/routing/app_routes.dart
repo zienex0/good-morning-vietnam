@@ -9,4 +9,7 @@ abstract final class AppRoutes {
   static const String transfer = '/transfer';
   static const String selectCurrency = '/select-currency';
   static const String selectAccount = '/select-account';
+  static const String onboarding = '/onboarding';
+  static const String newTrip = '/trips/new';
+  static const String newAccount = '/accounts/new';
 }
