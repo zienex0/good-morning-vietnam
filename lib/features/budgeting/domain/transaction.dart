@@ -10,14 +10,8 @@ enum TransactionType { expense, income, transfer }
 class Transaction with _$Transaction {
   Transaction._();
 
-  @Assert('amount > 0', 'amount must be positive')
-  @Assert('amountHome > 0', 'amountHome must be positive')
-  @Assert('fxRate > 0', 'fxRate must be positive')
-  @Assert(
-    '(enteredAmount == null && enteredCurrency == null && enteredFxRate == null) || '
-        '(enteredAmount != null && enteredAmount > 0 && enteredCurrency != null && enteredFxRate != null && enteredFxRate > 0)',
-    'entered currency details must be complete and positive',
-  )
+  @Assert('paidAmount > 0', 'paidAmount must be positive')
+  @Assert('accountAmount > 0', 'accountAmount must be positive')
   @Assert(
     'type != TransactionType.expense || '
         '(sourceAccountId != null && destAccountId == null && categoryId != null)',
@@ -35,17 +29,10 @@ class Transaction with _$Transaction {
   )
   @Assert(
     '(type == TransactionType.transfer) == '
-        '(destAmount != null && destCurrency != null && destFxRate != null)',
-    'dest currency snapshot is required for transfers and forbidden otherwise',
+        '(destAmount != null && destCurrency != null)',
+    'dest amount is required for transfers and forbidden otherwise',
   )
-  @Assert(
-    'destAmount == null || destAmount > 0',
-    'destAmount must be positive',
-  )
-  @Assert(
-    'destFxRate == null || destFxRate > 0',
-    'destFxRate must be positive',
-  )
+  @Assert('destAmount == null || destAmount > 0', 'destAmount must be positive')
   @Assert(
     'amortization == null || type == TransactionType.expense',
     'only expenses can be amortized',
@@ -58,16 +45,12 @@ class Transaction with _$Transaction {
     String? sourceAccountId,
     String? destAccountId,
     String? categoryId,
-    required double amount,
-    required CurrencyCode currency,
-    required double amountHome,
-    required double fxRate,
-    double? enteredAmount,
-    CurrencyCode? enteredCurrency,
-    double? enteredFxRate,
+    required double paidAmount,
+    required CurrencyCode paidCurrency,
+    required double accountAmount,
+    required CurrencyCode accountCurrency,
     double? destAmount,
     CurrencyCode? destCurrency,
-    double? destFxRate,
     String? note,
     Amortization? amortization,
     required DateTime createdAt,
@@ -76,50 +59,51 @@ class Transaction with _$Transaction {
   bool get isExpense => type == TransactionType.expense;
   bool get isIncome => type == TransactionType.income;
   bool get isTransfer => type == TransactionType.transfer;
-  bool get hasEnteredCurrency => enteredCurrency != null;
+  bool get hasSeparateAccountAmount =>
+      paidCurrency != accountCurrency || paidAmount != accountAmount;
   bool get hasDestCurrency => destCurrency != null;
   bool get isCrossCurrencyTransfer =>
-      isTransfer && destCurrency != null && destCurrency != currency;
+      isTransfer && destCurrency != null && destCurrency != accountCurrency;
 
   bool get isAmortized => amortization != null;
 
   /// Number of days this expense is spread across (1 when not amortized).
   int get spreadDayCount => amortization?.dayCountFrom(occurredAt) ?? 1;
 
-  /// Home-currency amount attributed to a single day of the spread window.
-  double get amountHomePerDay => amountHome / spreadDayCount;
+  /// Paid amount attributed to a single day of the spread window.
+  double get paidAmountPerDay => paidAmount / spreadDayCount;
 
-  /// Home-currency amount this expense contributes to the calendar day [day].
-  double amountHomeOnDay(DateTime day) {
+  /// Paid amount this expense contributes to the calendar day [day].
+  double paidAmountOnDay(DateTime day) {
     final start = DateTime(occurredAt.year, occurredAt.month, occurredAt.day);
     final target = DateTime(day.year, day.month, day.day);
     final span = spreadDayCount;
     if (span <= 1) {
-      return target == start ? amountHome : 0;
+      return target == start ? paidAmount : 0;
     }
     final offset = target.difference(start).inDays;
     if (offset < 0 || offset >= span) {
       return 0;
     }
-    return amountHomePerDay;
+    return paidAmountPerDay;
   }
 
-  /// Home-currency amount that has accrued on or before [asOf]. Returns 0 for a
-  /// fully future expense and the full amount once the spread window is over.
-  double amountHomeThrough(DateTime asOf) {
+  /// Paid amount that has accrued on or before [asOf]. Returns 0 for a fully
+  /// future expense and the full amount once the spread window is over.
+  double paidAmountThrough(DateTime asOf) {
     final start = DateTime(occurredAt.year, occurredAt.month, occurredAt.day);
     final asOfDate = DateTime(asOf.year, asOf.month, asOf.day);
     final span = spreadDayCount;
     if (span <= 1) {
-      return asOfDate.isBefore(start) ? 0 : amountHome;
+      return asOfDate.isBefore(start) ? 0 : paidAmount;
     }
     final elapsed = asOfDate.difference(start).inDays + 1;
     if (elapsed <= 0) {
       return 0;
     }
     if (elapsed >= span) {
-      return amountHome;
+      return paidAmount;
     }
-    return amountHomePerDay * elapsed;
+    return paidAmountPerDay * elapsed;
   }
 }

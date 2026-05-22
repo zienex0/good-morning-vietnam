@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_trip_form_controller.dart';
@@ -53,8 +54,7 @@ class BudgetingAccountFormPageState
 
     final formState = ref.watch(budgetingTripFormControllerProvider);
     final activeTrip = ref.watch(activeTripProvider).valueOrNull;
-    final effectiveCurrency =
-        currency ?? activeTrip?.homeCurrency ?? 'USD';
+    final effectiveCurrency = currency ?? activeTrip?.homeCurrency ?? 'USD';
     final currencyOption = budgetingCurrencyByCode(effectiveCurrency);
 
     return AppSliverPage(
@@ -89,7 +89,10 @@ class BudgetingAccountFormPageState
                 AppKeyValueRow(
                   label: 'Currency',
                   value: formatBudgetingCurrencyTitle(currencyOption),
-                  trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
+                  trailing: const Icon(
+                    Icons.unfold_more,
+                    size: AppSizes.iconSm,
+                  ),
                   onTap: () async {
                     final picked = await pushBudgetingCurrencyPicker(
                       context,
@@ -103,7 +106,10 @@ class BudgetingAccountFormPageState
                 AppKeyValueRow(
                   label: 'Type',
                   value: budgetingAccountTypeLabel(type),
-                  trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
+                  trailing: const Icon(
+                    Icons.unfold_more,
+                    size: AppSizes.iconSm,
+                  ),
                   onTap: _pickType,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -113,8 +119,9 @@ class BudgetingAccountFormPageState
                     labelText: 'Opening balance',
                     prefixText: '${currencyOption.symbol} ',
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ],
             ),
@@ -159,6 +166,6 @@ class BudgetingAccountFormPageState
         );
     if (!mounted || created == null) return;
     AppSnackBars.success(context, 'Account added.');
-    context.pop();
+    context.go(AppRoutes.accounts);
   }
 }

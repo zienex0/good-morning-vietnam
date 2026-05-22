@@ -18,8 +18,8 @@ class BudgetingHomePage extends ConsumerWidget {
       children: [
         BudgetingHomeHero(trip: trip),
         const BudgetingHomeActions(),
-        BudgetingSpendTrendSection(trip: trip),
-        BudgetingTransactionsSection(trip: trip),
+        const BudgetingSpendTrendSection(),
+        const BudgetingTransactionsSection(),
       ],
     );
   }

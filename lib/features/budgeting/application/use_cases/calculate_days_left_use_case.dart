@@ -19,7 +19,10 @@ class CalculateDaysLeftUseCase {
     required String tripId,
     required DateTime asOf,
   }) async {
-    final balanceResult = await _calculateTotalAccountsBalance(tripId: tripId);
+    final balanceResult = await _calculateTotalAccountsBalance(
+      tripId: tripId,
+      asOf: asOf,
+    );
     final double balance;
     switch (balanceResult) {
       case Ok(value: final value):

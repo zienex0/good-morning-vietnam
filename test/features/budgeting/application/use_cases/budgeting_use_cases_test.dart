@@ -1,7 +1,9 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_average_daily_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_days_left_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_spend_trend_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_total_accounts_balance_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_total_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/convert_to_home_currency_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_top_up_use_case.dart';
@@ -22,48 +24,46 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('budgeting use cases', () {
-    test(
-      'creates an expense with a historical home-currency snapshot',
-      () async {
-        final trip = testTrip();
-        const account = Account(
-          id: 'account-1',
-          tripId: 'trip-1',
-          name: 'Cash JPY',
-          type: AccountType.cash,
-          currency: 'JPY',
-          openingBalance: 0,
-        );
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          accounts: [account],
-        );
-        final useCase = CreateExpenseUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 0.0062),
-          ),
-          idGenerator: const FixedBudgetingIdGenerator(
-            fixedTransactionId: 'txn-1',
-          ),
-        );
+    test('creates an expense with immutable paid and account facts', () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'account-1',
+        tripId: 'trip-1',
+        name: 'Cash JPY',
+        type: AccountType.cash,
+        currency: 'JPY',
+        openingBalance: 0,
+      );
+      final repository = FakeBudgetingRepository(
+        trips: [trip],
+        accounts: [account],
+      );
+      final useCase = CreateExpenseUseCase(
+        repository: repository,
+        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+          FakeExchangeRateRepository(rate: 0.0062),
+        ),
+        idGenerator: const FixedBudgetingIdGenerator(
+          fixedTransactionId: 'txn-1',
+        ),
+      );
 
-        final result = await useCase(
-          tripId: trip.id,
-          accountId: account.id,
-          categoryId: 'food',
-          amount: 680,
-          occurredAt: DateTime(2026, 5, 20),
-          createdAt: DateTime(2026, 5, 20, 9),
-        );
+      final result = await useCase(
+        tripId: trip.id,
+        accountId: account.id,
+        categoryId: 'food',
+        amount: 680,
+        occurredAt: DateTime(2026, 5, 20),
+        createdAt: DateTime(2026, 5, 20, 9),
+      );
 
-        final transaction = expectOk(result);
-        expect(transaction.type, TransactionType.expense);
-        expect(transaction.currency, 'JPY');
-        expect(transaction.amountHome, closeTo(4.216, 0.001));
-        expect(transaction.fxRate, 0.0062);
-      },
-    );
+      final transaction = expectOk(result);
+      expect(transaction.type, TransactionType.expense);
+      expect(transaction.paidAmount, 680);
+      expect(transaction.paidCurrency, 'JPY');
+      expect(transaction.accountAmount, 680);
+      expect(transaction.accountCurrency, 'JPY');
+    });
 
     test(
       'converts an entered receipt currency into the payment account currency',
@@ -84,7 +84,7 @@ void main() {
         final useCase = CreateExpenseUseCase(
           repository: repository,
           convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            PairExchangeRateRepository({'VND:PLN': 0.00015, 'PLN:USD': 0.25}),
+            PairExchangeRateRepository({'VND:PLN': 0.00015}),
           ),
           idGenerator: const FixedBudgetingIdGenerator(
             fixedTransactionId: 'txn-foreign-receipt',
@@ -96,17 +96,15 @@ void main() {
           accountId: account.id,
           categoryId: 'toys',
           amount: 90000,
-          amountCurrency: 'VND',
+          paidCurrency: 'VND',
           occurredAt: DateTime(2026, 5, 21),
         );
 
         final transaction = expectOk(result);
-        expect(transaction.currency, 'PLN');
-        expect(transaction.amount, closeTo(13.5, 0.001));
-        expect(transaction.amountHome, closeTo(3.375, 0.001));
-        expect(transaction.enteredAmount, 90000);
-        expect(transaction.enteredCurrency, 'VND');
-        expect(transaction.enteredFxRate, 0.00015);
+        expect(transaction.paidAmount, 90000);
+        expect(transaction.paidCurrency, 'VND');
+        expect(transaction.accountAmount, closeTo(13.5, 0.001));
+        expect(transaction.accountCurrency, 'PLN');
       },
     );
 
@@ -145,12 +143,15 @@ void main() {
       expect(transaction.type, TransactionType.income);
       expect(transaction.sourceAccountId, isNull);
       expect(transaction.destAccountId, account.id);
-      expect(transaction.amountHome, 60);
+      expect(transaction.paidAmount, 10000);
+      expect(transaction.paidCurrency, 'JPY');
+      expect(transaction.accountAmount, 10000);
+      expect(transaction.accountCurrency, 'JPY');
     });
 
     test('loads transactions and fetches one by id', () async {
       final trip = testTrip();
-      final transaction = testExpense(amountHome: 12);
+      final transaction = testExpense(paidAmount: 12);
       final repository = FakeBudgetingRepository(
         trips: [trip],
         transactions: [transaction],
@@ -192,8 +193,12 @@ void main() {
         accounts: [usdAccount, jpyAccount],
         transactions: [
           testExpense(),
-          testTopUp(destAccountId: 'jpy', amountHome: 20),
-          testTransfer(amountHome: 30),
+          testTopUp(
+            destAccountId: 'jpy',
+            accountAmount: 20,
+            accountCurrency: 'JPY',
+          ),
+          testTransfer(accountAmount: 30, destAmount: 30, destCurrency: 'JPY'),
         ],
       );
       final useCase = CalculateTotalAccountsBalanceUseCase(
@@ -203,9 +208,11 @@ void main() {
         ),
       );
 
-      final total = expectOk(await useCase(tripId: trip.id));
+      final total = expectOk(
+        await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 21)),
+      );
 
-      expect(total, 170);
+      expect(total, closeTo(120.3, 0.001));
     });
 
     test('calculates average daily spend for elapsed trip days', () async {
@@ -213,24 +220,90 @@ void main() {
       final repository = FakeBudgetingRepository(
         trips: [trip],
         transactions: [
-          testExpense(amountHome: 40),
+          testExpense(paidAmount: 40),
           testExpense(
             id: 'txn-2',
-            amountHome: 60,
+            paidAmount: 60,
             occurredAt: DateTime(2026, 5, 12),
           ),
         ],
       );
 
       final average = expectOk(
-        await CalculateAverageDailySpendUseCase(repository)(
-          tripId: trip.id,
-          asOf: DateTime(2026, 5, 12, 23),
-        ),
+        await CalculateAverageDailySpendUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 1),
+          ),
+        )(tripId: trip.id, asOf: DateTime(2026, 5, 12, 23)),
       );
 
       expect(average, 25);
     });
+
+    test(
+      'converts spend metrics from paid facts into the trip currency',
+      () async {
+        final trip = testTrip();
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          transactions: [
+            testExpense(
+              paidAmount: 22000,
+              paidCurrency: 'VND',
+              accountAmount: 0.84,
+            ),
+          ],
+        );
+        final useCase = CalculateTotalSpendUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            PairExchangeRateRepository({'VND:USD': 0.000038}),
+          ),
+        );
+
+        final total = expectOk(await useCase(tripId: trip.id));
+
+        expect(total, closeTo(0.836, 0.001));
+      },
+    );
+
+    test(
+      'spend trend converts the paid amount across amortized days',
+      () async {
+        final trip = testTrip();
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          transactions: [
+            testExpense(
+              paidAmount: 70000,
+              paidCurrency: 'VND',
+              accountAmount: 2.66,
+              amortization: const Amortization(
+                unit: AmortizationUnit.days,
+                count: 7,
+              ),
+            ),
+          ],
+        );
+        final useCase = CalculateSpendTrendUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            PairExchangeRateRepository({'VND:USD': 0.000038}),
+          ),
+        );
+
+        final points = expectOk(
+          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 11)),
+        );
+
+        expect(points.map((point) => point.value).toList(), [
+          closeTo(0.38, 0.001),
+          closeTo(0.76, 0.001),
+          closeTo(1.14, 0.001),
+        ]);
+      },
+    );
 
     test('persists amortization on a spread expense', () async {
       final trip = testTrip();
@@ -272,7 +345,7 @@ void main() {
 
       expect(transaction.isAmortized, isTrue);
       expect(transaction.spreadDayCount, 7);
-      expect(transaction.amountHome, 500);
+      expect(transaction.paidAmount, 500);
     });
 
     test('average daily spend uses only the elapsed slice of a spread '
@@ -283,7 +356,7 @@ void main() {
         transactions: [
           // 70 spread over 7 days from the trip start day.
           testExpense(
-            amountHome: 70,
+            paidAmount: 70,
             amortization: const Amortization(
               unit: AmortizationUnit.days,
               count: 7,
@@ -293,50 +366,57 @@ void main() {
       );
 
       final average = expectOk(
-        await CalculateAverageDailySpendUseCase(repository)(
-          tripId: trip.id,
-          asOf: DateTime(2026, 5, 9, 23),
-        ),
+        await CalculateAverageDailySpendUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 1),
+          ),
+        )(tripId: trip.id, asOf: DateTime(2026, 5, 9, 23)),
       );
 
       // One day elapsed: 10 accrued / 1 day, not the full 70.
       expect(average, 10);
     });
 
-    test('amortized expense still deducts the full amount from balance', () async {
-      final trip = testTrip();
-      const account = Account(
-        id: 'usd',
-        tripId: 'trip-1',
-        name: 'USD cash',
-        type: AccountType.cash,
-        currency: 'USD',
-        openingBalance: 500,
-      );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [account],
-        transactions: [
-          testExpense(
-            amountHome: 70,
-            amortization: const Amortization(
-              unit: AmortizationUnit.days,
-              count: 7,
+    test(
+      'amortized expense still deducts the full amount from balance',
+      () async {
+        final trip = testTrip();
+        const account = Account(
+          id: 'usd',
+          tripId: 'trip-1',
+          name: 'USD cash',
+          type: AccountType.cash,
+          currency: 'USD',
+          openingBalance: 500,
+        );
+        final repository = FakeBudgetingRepository(
+          trips: [trip],
+          accounts: [account],
+          transactions: [
+            testExpense(
+              paidAmount: 70,
+              amortization: const Amortization(
+                unit: AmortizationUnit.days,
+                count: 7,
+              ),
             ),
+          ],
+        );
+        final useCase = CalculateTotalAccountsBalanceUseCase(
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 1),
           ),
-        ],
-      );
-      final useCase = CalculateTotalAccountsBalanceUseCase(
-        repository: repository,
-        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-          FakeExchangeRateRepository(rate: 1),
-        ),
-      );
+        );
 
-      final total = expectOk(await useCase(tripId: trip.id));
+        final total = expectOk(
+          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 21)),
+        );
 
-      expect(total, 430);
-    });
+        expect(total, 430);
+      },
+    );
 
     test('calculates days left from balance and average spend', () async {
       final trip = testTrip();
@@ -352,12 +432,15 @@ void main() {
         trips: [trip],
         accounts: [account],
         transactions: [
-          testExpense(amountHome: 100, occurredAt: DateTime(2026, 5, 10)),
+          testExpense(paidAmount: 100, occurredAt: DateTime(2026, 5, 10)),
         ],
       );
       final useCase = CalculateDaysLeftUseCase(
         calculateAverageDailySpend: CalculateAverageDailySpendUseCase(
-          repository,
+          repository: repository,
+          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
+            FakeExchangeRateRepository(rate: 1),
+          ),
         ),
         calculateTotalAccountsBalance: CalculateTotalAccountsBalanceUseCase(
           repository: repository,
@@ -401,7 +484,7 @@ void main() {
         final useCase = CreateTransferUseCase(
           repository: repository,
           convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            PairExchangeRateRepository({'JPY:USD': 0.0062}),
+            PairExchangeRateRepository({}),
           ),
           idGenerator: const FixedBudgetingIdGenerator(
             fixedTransactionId: 'txn-xfer',
@@ -418,12 +501,12 @@ void main() {
         );
 
         final transaction = expectOk(result);
-        expect(transaction.amount, 100);
-        expect(transaction.currency, 'USD');
+        expect(transaction.paidAmount, 100);
+        expect(transaction.paidCurrency, 'USD');
+        expect(transaction.accountAmount, 100);
+        expect(transaction.accountCurrency, 'USD');
         expect(transaction.destAmount, 15800);
         expect(transaction.destCurrency, 'JPY');
-        expect(transaction.destFxRate, closeTo(0.0062, 1e-9));
-        expect(transaction.amountHome, 100);
       },
     );
 
@@ -454,13 +537,12 @@ void main() {
           occurredAt: DateTime(2026, 5, 18),
           sourceAccountId: 'usd',
           destAccountId: 'jpy',
-          amount: 100,
-          currency: 'USD',
-          amountHome: 100,
-          fxRate: 1,
+          paidAmount: 100,
+          paidCurrency: 'USD',
+          accountAmount: 100,
+          accountCurrency: 'USD',
           destAmount: 15800,
           destCurrency: 'JPY',
-          destFxRate: 0.0062,
           createdAt: DateTime(2026, 5, 18),
         );
         final repository = FakeBudgetingRepository(
@@ -475,7 +557,9 @@ void main() {
           ),
         );
 
-        final total = expectOk(await useCase(tripId: trip.id));
+        final total = expectOk(
+          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 18)),
+        );
         // 500 USD opening - 100 USD source side + 15800 * 0.0062 = 497.96
         expect(total, closeTo(497.96, 0.001));
       },
@@ -529,7 +613,10 @@ Trip testTrip() {
 Transaction testExpense({
   String id = 'txn-1',
   String sourceAccountId = 'usd',
-  double amountHome = 10,
+  double paidAmount = 10,
+  String paidCurrency = 'USD',
+  double? accountAmount,
+  String accountCurrency = 'USD',
   DateTime? occurredAt,
   Amortization? amortization,
 }) {
@@ -540,10 +627,10 @@ Transaction testExpense({
     occurredAt: occurredAt ?? DateTime(2026, 5, 9),
     sourceAccountId: sourceAccountId,
     categoryId: 'food',
-    amount: amountHome,
-    currency: 'USD',
-    amountHome: amountHome,
-    fxRate: 1,
+    paidAmount: paidAmount,
+    paidCurrency: paidCurrency,
+    accountAmount: accountAmount ?? paidAmount,
+    accountCurrency: accountCurrency,
     amortization: amortization,
     createdAt: DateTime(2026),
   );
@@ -552,7 +639,10 @@ Transaction testExpense({
 Transaction testTopUp({
   String id = 'txn-top-up',
   String destAccountId = 'usd',
-  double amountHome = 10,
+  double paidAmount = 10,
+  String paidCurrency = 'USD',
+  double? accountAmount,
+  String accountCurrency = 'USD',
 }) {
   return Transaction(
     id: id,
@@ -560,19 +650,21 @@ Transaction testTopUp({
     type: TransactionType.income,
     occurredAt: DateTime(2026, 5, 9),
     destAccountId: destAccountId,
-    amount: amountHome,
-    currency: 'USD',
-    amountHome: amountHome,
-    fxRate: 1,
+    paidAmount: paidAmount,
+    paidCurrency: paidCurrency,
+    accountAmount: accountAmount ?? paidAmount,
+    accountCurrency: accountCurrency,
     createdAt: DateTime(2026),
   );
 }
 
 Transaction testTransfer({
-  double amountHome = 10,
+  double paidAmount = 10,
+  String paidCurrency = 'USD',
+  double? accountAmount,
+  String accountCurrency = 'USD',
   double? destAmount,
   String destCurrency = 'USD',
-  double destFxRate = 1,
 }) {
   return Transaction(
     id: 'txn-transfer',
@@ -581,13 +673,12 @@ Transaction testTransfer({
     occurredAt: DateTime(2026, 5, 9),
     sourceAccountId: 'usd',
     destAccountId: 'jpy',
-    amount: amountHome,
-    currency: 'USD',
-    amountHome: amountHome,
-    fxRate: 1,
-    destAmount: destAmount ?? amountHome,
+    paidAmount: paidAmount,
+    paidCurrency: paidCurrency,
+    accountAmount: accountAmount ?? paidAmount,
+    accountCurrency: accountCurrency,
+    destAmount: destAmount ?? paidAmount,
     destCurrency: destCurrency,
-    destFxRate: destFxRate,
     createdAt: DateTime(2026),
   );
 }
@@ -683,10 +774,11 @@ class FakeBudgetingRepository implements BudgetingRepository {
   Future<Result<List<Transaction>, Failure>> fetchTransactions({
     required String tripId,
   }) async {
-    final transactions = _transactions.values
-        .where((transaction) => transaction.tripId == tripId)
-        .toList()
-      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    final transactions =
+        _transactions.values
+            .where((transaction) => transaction.tripId == tripId)
+            .toList()
+          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     return Ok(transactions);
   }
 
@@ -715,11 +807,12 @@ class FakeBudgetingRepository implements BudgetingRepository {
     required String tripId,
     bool includeArchived = false,
   }) async {
-    final accounts = _accounts.values
-        .where((account) => account.tripId == tripId)
-        .where((account) => includeArchived || !account.archived)
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final accounts =
+        _accounts.values
+            .where((account) => account.tripId == tripId)
+            .where((account) => includeArchived || !account.archived)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
     return Ok(accounts);
   }
 

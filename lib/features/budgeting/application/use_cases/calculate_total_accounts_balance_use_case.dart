@@ -18,7 +18,10 @@ class CalculateTotalAccountsBalanceUseCase {
   final BudgetingRepository _repository;
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
 
-  Future<Result<double, Failure>> call({required String tripId}) async {
+  Future<Result<double, Failure>> call({
+    required String tripId,
+    required DateTime asOf,
+  }) async {
     final tripResult = await _repository.fetchTrip(tripId: tripId);
     final Trip trip;
     switch (tripResult) {
@@ -48,51 +51,55 @@ class CalculateTotalAccountsBalanceUseCase {
         return Err(failure);
     }
 
-    final activeAccountIds = accounts.map((account) => account.id).toSet();
-    var total = 0.0;
+    final accountsById = {for (final account in accounts) account.id: account};
+    final balances = {
+      for (final account in accounts) account.id: account.openingBalance,
+    };
 
-    for (final account in accounts) {
+    for (final transaction in transactions) {
+      switch (transaction.type) {
+        case TransactionType.expense:
+          final sourceAccountId = transaction.sourceAccountId;
+          if (sourceAccountId != null &&
+              balances.containsKey(sourceAccountId)) {
+            balances[sourceAccountId] =
+                balances[sourceAccountId]! - transaction.accountAmount;
+          }
+        case TransactionType.income:
+          final destAccountId = transaction.destAccountId;
+          if (destAccountId != null && balances.containsKey(destAccountId)) {
+            balances[destAccountId] =
+                balances[destAccountId]! + transaction.accountAmount;
+          }
+        case TransactionType.transfer:
+          final sourceAccountId = transaction.sourceAccountId;
+          if (sourceAccountId != null &&
+              balances.containsKey(sourceAccountId)) {
+            balances[sourceAccountId] =
+                balances[sourceAccountId]! - transaction.accountAmount;
+          }
+          final destAccountId = transaction.destAccountId;
+          if (destAccountId != null && balances.containsKey(destAccountId)) {
+            balances[destAccountId] =
+                balances[destAccountId]! + transaction.destAmount!;
+          }
+      }
+    }
+
+    var total = 0.0;
+    for (final entry in balances.entries) {
+      final account = accountsById[entry.key]!;
       final conversionResult = await _convertToHomeCurrency(
-        amount: account.openingBalance,
+        amount: entry.value,
         sourceCurrency: account.currency,
         homeCurrency: trip.homeCurrency,
-        date: trip.startDate,
+        date: asOf,
       );
       switch (conversionResult) {
         case Ok(value: final conversion):
           total += conversion.amountHome;
         case Err(failure: final failure):
           return Err(failure);
-      }
-    }
-
-    for (final transaction in transactions) {
-      switch (transaction.type) {
-        case TransactionType.expense:
-          if (activeAccountIds.contains(transaction.sourceAccountId)) {
-            total -= transaction.amountHome;
-          }
-        case TransactionType.income:
-          if (activeAccountIds.contains(transaction.destAccountId)) {
-            total += transaction.amountHome;
-          }
-        case TransactionType.transfer:
-          final sourceIsActive = activeAccountIds.contains(
-            transaction.sourceAccountId,
-          );
-          final destinationIsActive = activeAccountIds.contains(
-            transaction.destAccountId,
-          );
-          final destHome = transaction.destAmount == null ||
-                  transaction.destFxRate == null
-              ? transaction.amountHome
-              : transaction.destAmount! * transaction.destFxRate!;
-          if (sourceIsActive) {
-            total -= transaction.amountHome;
-          }
-          if (destinationIsActive) {
-            total += destHome;
-          }
       }
     }
 

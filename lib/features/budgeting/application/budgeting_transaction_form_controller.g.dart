@@ -7,7 +7,7 @@ part of 'budgeting_transaction_form_controller.dart';
 // **************************************************************************
 
 String _$budgetingTransactionFormControllerHash() =>
-    r'6b7caa93964bd3b00238e3ce2bca0e7b43934307';
+    r'e2e59ad3b6e2fc49fe964ebb5d690ae305511fbe';
 
 /// See also [BudgetingTransactionFormController].
 @ProviderFor(BudgetingTransactionFormController)

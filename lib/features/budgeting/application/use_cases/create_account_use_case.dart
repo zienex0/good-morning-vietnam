@@ -66,9 +66,7 @@ class CreateAccountUseCase {
       return const ValidationFailure('Account currency is required.');
     }
     if (openingBalance < 0) {
-      return const ValidationFailure(
-        'Opening balance cannot be negative.',
-      );
+      return const ValidationFailure('Opening balance cannot be negative.');
     }
     return null;
   }

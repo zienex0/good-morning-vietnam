@@ -1,67 +1,62 @@
-import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
-import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_chart_data.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final trip = Trip(
-    id: 'trip-1',
-    name: 'Vietnam 2026',
-    homeCurrency: 'USD',
-    startDate: DateTime(2026, 5, 9),
-    status: TripStatus.active,
-    createdAt: DateTime(2026),
-  );
-
   Transaction expense({
-    required double amountHome,
-    required DateTime occurredAt,
-    Amortization? amortization,
+    required double paidAmount,
+    required double accountAmount,
   }) {
     return Transaction(
-      id: 'txn-${occurredAt.day}-${amortization?.count ?? 0}',
+      id: 'txn-expense',
       tripId: 'trip-1',
       type: TransactionType.expense,
-      occurredAt: occurredAt,
+      occurredAt: DateTime(2026, 5, 9),
       sourceAccountId: 'usd',
-      categoryId: 'lodging',
-      amount: amountHome,
-      currency: 'USD',
-      amountHome: amountHome,
-      fxRate: 1,
-      amortization: amortization,
+      categoryId: 'food',
+      paidAmount: paidAmount,
+      paidCurrency: 'VND',
+      accountAmount: accountAmount,
+      accountCurrency: 'USD',
       createdAt: DateTime(2026),
     );
   }
 
-  test('a plain expense spikes the cumulative trend on its day', () {
-    final points = cumulativeSpendTrend(
-      trip: trip,
-      transactions: [expense(amountHome: 70, occurredAt: DateTime(2026, 5, 9))],
-      asOf: DateTime(2026, 5, 11),
+  Transaction transfer() {
+    return Transaction(
+      id: 'txn-transfer',
+      tripId: 'trip-1',
+      type: TransactionType.transfer,
+      occurredAt: DateTime(2026, 5, 10),
+      sourceAccountId: 'usd',
+      destAccountId: 'vnd',
+      paidAmount: 20,
+      paidCurrency: 'USD',
+      accountAmount: 20,
+      accountCurrency: 'USD',
+      destAmount: 500000,
+      destCurrency: 'VND',
+      createdAt: DateTime(2026),
+    );
+  }
+
+  test('account balances use account-side facts, not paid receipt facts', () {
+    final balance = computeAccountBalance(
+      accountId: 'usd',
+      openingBalance: 100,
+      transactions: [expense(paidAmount: 22000, accountAmount: 0.84)],
     );
 
-    expect(points.map((point) => point.value).toList(), [70, 70, 70]);
+    expect(balance, 99.16);
   });
 
-  test('an amortized expense ramps the cumulative trend day by day', () {
-    final points = cumulativeSpendTrend(
-      trip: trip,
-      transactions: [
-        expense(
-          amountHome: 70,
-          occurredAt: DateTime(2026, 5, 9),
-          amortization: const Amortization(
-            unit: AmortizationUnit.days,
-            count: 7,
-          ),
-        ),
-      ],
-      asOf: DateTime(2026, 5, 11),
+  test('transfers credit the destination-side fact', () {
+    final balance = computeAccountBalance(
+      accountId: 'vnd',
+      openingBalance: 0,
+      transactions: [transfer()],
     );
 
-    // 70 spread over 7 days => 10/day, so the cumulative line steps by 10.
-    expect(points.map((point) => point.value).toList(), [10, 20, 30]);
+    expect(balance, 500000);
   });
 }

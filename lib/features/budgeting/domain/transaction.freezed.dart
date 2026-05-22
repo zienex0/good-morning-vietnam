@@ -24,16 +24,12 @@ mixin _$Transaction {
   String? get sourceAccountId => throw _privateConstructorUsedError;
   String? get destAccountId => throw _privateConstructorUsedError;
   String? get categoryId => throw _privateConstructorUsedError;
-  double get amount => throw _privateConstructorUsedError;
-  String get currency => throw _privateConstructorUsedError;
-  double get amountHome => throw _privateConstructorUsedError;
-  double get fxRate => throw _privateConstructorUsedError;
-  double? get enteredAmount => throw _privateConstructorUsedError;
-  String? get enteredCurrency => throw _privateConstructorUsedError;
-  double? get enteredFxRate => throw _privateConstructorUsedError;
+  double get paidAmount => throw _privateConstructorUsedError;
+  String get paidCurrency => throw _privateConstructorUsedError;
+  double get accountAmount => throw _privateConstructorUsedError;
+  String get accountCurrency => throw _privateConstructorUsedError;
   double? get destAmount => throw _privateConstructorUsedError;
   String? get destCurrency => throw _privateConstructorUsedError;
-  double? get destFxRate => throw _privateConstructorUsedError;
   String? get note => throw _privateConstructorUsedError;
   Amortization? get amortization => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -60,16 +56,12 @@ abstract class $TransactionCopyWith<$Res> {
     String? sourceAccountId,
     String? destAccountId,
     String? categoryId,
-    double amount,
-    String currency,
-    double amountHome,
-    double fxRate,
-    double? enteredAmount,
-    String? enteredCurrency,
-    double? enteredFxRate,
+    double paidAmount,
+    String paidCurrency,
+    double accountAmount,
+    String accountCurrency,
     double? destAmount,
     String? destCurrency,
-    double? destFxRate,
     String? note,
     Amortization? amortization,
     DateTime createdAt,
@@ -100,16 +92,12 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
     Object? sourceAccountId = freezed,
     Object? destAccountId = freezed,
     Object? categoryId = freezed,
-    Object? amount = null,
-    Object? currency = null,
-    Object? amountHome = null,
-    Object? fxRate = null,
-    Object? enteredAmount = freezed,
-    Object? enteredCurrency = freezed,
-    Object? enteredFxRate = freezed,
+    Object? paidAmount = null,
+    Object? paidCurrency = null,
+    Object? accountAmount = null,
+    Object? accountCurrency = null,
     Object? destAmount = freezed,
     Object? destCurrency = freezed,
-    Object? destFxRate = freezed,
     Object? note = freezed,
     Object? amortization = freezed,
     Object? createdAt = null,
@@ -144,34 +132,22 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
                 ? _value.categoryId
                 : categoryId // ignore: cast_nullable_to_non_nullable
                       as String?,
-            amount: null == amount
-                ? _value.amount
-                : amount // ignore: cast_nullable_to_non_nullable
+            paidAmount: null == paidAmount
+                ? _value.paidAmount
+                : paidAmount // ignore: cast_nullable_to_non_nullable
                       as double,
-            currency: null == currency
-                ? _value.currency
-                : currency // ignore: cast_nullable_to_non_nullable
+            paidCurrency: null == paidCurrency
+                ? _value.paidCurrency
+                : paidCurrency // ignore: cast_nullable_to_non_nullable
                       as String,
-            amountHome: null == amountHome
-                ? _value.amountHome
-                : amountHome // ignore: cast_nullable_to_non_nullable
+            accountAmount: null == accountAmount
+                ? _value.accountAmount
+                : accountAmount // ignore: cast_nullable_to_non_nullable
                       as double,
-            fxRate: null == fxRate
-                ? _value.fxRate
-                : fxRate // ignore: cast_nullable_to_non_nullable
-                      as double,
-            enteredAmount: freezed == enteredAmount
-                ? _value.enteredAmount
-                : enteredAmount // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            enteredCurrency: freezed == enteredCurrency
-                ? _value.enteredCurrency
-                : enteredCurrency // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            enteredFxRate: freezed == enteredFxRate
-                ? _value.enteredFxRate
-                : enteredFxRate // ignore: cast_nullable_to_non_nullable
-                      as double?,
+            accountCurrency: null == accountCurrency
+                ? _value.accountCurrency
+                : accountCurrency // ignore: cast_nullable_to_non_nullable
+                      as String,
             destAmount: freezed == destAmount
                 ? _value.destAmount
                 : destAmount // ignore: cast_nullable_to_non_nullable
@@ -180,10 +156,6 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
                 ? _value.destCurrency
                 : destCurrency // ignore: cast_nullable_to_non_nullable
                       as String?,
-            destFxRate: freezed == destFxRate
-                ? _value.destFxRate
-                : destFxRate // ignore: cast_nullable_to_non_nullable
-                      as double?,
             note: freezed == note
                 ? _value.note
                 : note // ignore: cast_nullable_to_non_nullable
@@ -233,16 +205,12 @@ abstract class _$$TransactionImplCopyWith<$Res>
     String? sourceAccountId,
     String? destAccountId,
     String? categoryId,
-    double amount,
-    String currency,
-    double amountHome,
-    double fxRate,
-    double? enteredAmount,
-    String? enteredCurrency,
-    double? enteredFxRate,
+    double paidAmount,
+    String paidCurrency,
+    double accountAmount,
+    String accountCurrency,
     double? destAmount,
     String? destCurrency,
-    double? destFxRate,
     String? note,
     Amortization? amortization,
     DateTime createdAt,
@@ -273,16 +241,12 @@ class __$$TransactionImplCopyWithImpl<$Res>
     Object? sourceAccountId = freezed,
     Object? destAccountId = freezed,
     Object? categoryId = freezed,
-    Object? amount = null,
-    Object? currency = null,
-    Object? amountHome = null,
-    Object? fxRate = null,
-    Object? enteredAmount = freezed,
-    Object? enteredCurrency = freezed,
-    Object? enteredFxRate = freezed,
+    Object? paidAmount = null,
+    Object? paidCurrency = null,
+    Object? accountAmount = null,
+    Object? accountCurrency = null,
     Object? destAmount = freezed,
     Object? destCurrency = freezed,
-    Object? destFxRate = freezed,
     Object? note = freezed,
     Object? amortization = freezed,
     Object? createdAt = null,
@@ -317,34 +281,22 @@ class __$$TransactionImplCopyWithImpl<$Res>
             ? _value.categoryId
             : categoryId // ignore: cast_nullable_to_non_nullable
                   as String?,
-        amount: null == amount
-            ? _value.amount
-            : amount // ignore: cast_nullable_to_non_nullable
+        paidAmount: null == paidAmount
+            ? _value.paidAmount
+            : paidAmount // ignore: cast_nullable_to_non_nullable
                   as double,
-        currency: null == currency
-            ? _value.currency
-            : currency // ignore: cast_nullable_to_non_nullable
+        paidCurrency: null == paidCurrency
+            ? _value.paidCurrency
+            : paidCurrency // ignore: cast_nullable_to_non_nullable
                   as String,
-        amountHome: null == amountHome
-            ? _value.amountHome
-            : amountHome // ignore: cast_nullable_to_non_nullable
+        accountAmount: null == accountAmount
+            ? _value.accountAmount
+            : accountAmount // ignore: cast_nullable_to_non_nullable
                   as double,
-        fxRate: null == fxRate
-            ? _value.fxRate
-            : fxRate // ignore: cast_nullable_to_non_nullable
-                  as double,
-        enteredAmount: freezed == enteredAmount
-            ? _value.enteredAmount
-            : enteredAmount // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        enteredCurrency: freezed == enteredCurrency
-            ? _value.enteredCurrency
-            : enteredCurrency // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        enteredFxRate: freezed == enteredFxRate
-            ? _value.enteredFxRate
-            : enteredFxRate // ignore: cast_nullable_to_non_nullable
-                  as double?,
+        accountCurrency: null == accountCurrency
+            ? _value.accountCurrency
+            : accountCurrency // ignore: cast_nullable_to_non_nullable
+                  as String,
         destAmount: freezed == destAmount
             ? _value.destAmount
             : destAmount // ignore: cast_nullable_to_non_nullable
@@ -353,10 +305,6 @@ class __$$TransactionImplCopyWithImpl<$Res>
             ? _value.destCurrency
             : destCurrency // ignore: cast_nullable_to_non_nullable
                   as String?,
-        destFxRate: freezed == destFxRate
-            ? _value.destFxRate
-            : destFxRate // ignore: cast_nullable_to_non_nullable
-                  as double?,
         note: freezed == note
             ? _value.note
             : note // ignore: cast_nullable_to_non_nullable
@@ -385,33 +333,17 @@ class _$TransactionImpl extends _Transaction {
     this.sourceAccountId,
     this.destAccountId,
     this.categoryId,
-    required this.amount,
-    required this.currency,
-    required this.amountHome,
-    required this.fxRate,
-    this.enteredAmount,
-    this.enteredCurrency,
-    this.enteredFxRate,
+    required this.paidAmount,
+    required this.paidCurrency,
+    required this.accountAmount,
+    required this.accountCurrency,
     this.destAmount,
     this.destCurrency,
-    this.destFxRate,
     this.note,
     this.amortization,
     required this.createdAt,
-  }) : assert(amount > 0, 'amount must be positive'),
-       assert(amountHome > 0, 'amountHome must be positive'),
-       assert(fxRate > 0, 'fxRate must be positive'),
-       assert(
-         (enteredAmount == null &&
-                 enteredCurrency == null &&
-                 enteredFxRate == null) ||
-             (enteredAmount != null &&
-                 enteredAmount > 0 &&
-                 enteredCurrency != null &&
-                 enteredFxRate != null &&
-                 enteredFxRate > 0),
-         'entered currency details must be complete and positive',
-       ),
+  }) : assert(paidAmount > 0, 'paidAmount must be positive'),
+       assert(accountAmount > 0, 'accountAmount must be positive'),
        assert(
          type != TransactionType.expense ||
              (sourceAccountId != null &&
@@ -433,16 +365,12 @@ class _$TransactionImpl extends _Transaction {
        ),
        assert(
          (type == TransactionType.transfer) ==
-             (destAmount != null && destCurrency != null && destFxRate != null),
-         'dest currency snapshot is required for transfers and forbidden otherwise',
+             (destAmount != null && destCurrency != null),
+         'dest amount is required for transfers and forbidden otherwise',
        ),
        assert(
          destAmount == null || destAmount > 0,
          'destAmount must be positive',
-       ),
-       assert(
-         destFxRate == null || destFxRate > 0,
-         'destFxRate must be positive',
        ),
        assert(
          amortization == null || type == TransactionType.expense,
@@ -465,25 +393,17 @@ class _$TransactionImpl extends _Transaction {
   @override
   final String? categoryId;
   @override
-  final double amount;
+  final double paidAmount;
   @override
-  final String currency;
+  final String paidCurrency;
   @override
-  final double amountHome;
+  final double accountAmount;
   @override
-  final double fxRate;
-  @override
-  final double? enteredAmount;
-  @override
-  final String? enteredCurrency;
-  @override
-  final double? enteredFxRate;
+  final String accountCurrency;
   @override
   final double? destAmount;
   @override
   final String? destCurrency;
-  @override
-  final double? destFxRate;
   @override
   final String? note;
   @override
@@ -493,7 +413,7 @@ class _$TransactionImpl extends _Transaction {
 
   @override
   String toString() {
-    return 'Transaction(id: $id, tripId: $tripId, type: $type, occurredAt: $occurredAt, sourceAccountId: $sourceAccountId, destAccountId: $destAccountId, categoryId: $categoryId, amount: $amount, currency: $currency, amountHome: $amountHome, fxRate: $fxRate, enteredAmount: $enteredAmount, enteredCurrency: $enteredCurrency, enteredFxRate: $enteredFxRate, destAmount: $destAmount, destCurrency: $destCurrency, destFxRate: $destFxRate, note: $note, amortization: $amortization, createdAt: $createdAt)';
+    return 'Transaction(id: $id, tripId: $tripId, type: $type, occurredAt: $occurredAt, sourceAccountId: $sourceAccountId, destAccountId: $destAccountId, categoryId: $categoryId, paidAmount: $paidAmount, paidCurrency: $paidCurrency, accountAmount: $accountAmount, accountCurrency: $accountCurrency, destAmount: $destAmount, destCurrency: $destCurrency, note: $note, amortization: $amortization, createdAt: $createdAt)';
   }
 
   @override
@@ -512,24 +432,18 @@ class _$TransactionImpl extends _Transaction {
                 other.destAccountId == destAccountId) &&
             (identical(other.categoryId, categoryId) ||
                 other.categoryId == categoryId) &&
-            (identical(other.amount, amount) || other.amount == amount) &&
-            (identical(other.currency, currency) ||
-                other.currency == currency) &&
-            (identical(other.amountHome, amountHome) ||
-                other.amountHome == amountHome) &&
-            (identical(other.fxRate, fxRate) || other.fxRate == fxRate) &&
-            (identical(other.enteredAmount, enteredAmount) ||
-                other.enteredAmount == enteredAmount) &&
-            (identical(other.enteredCurrency, enteredCurrency) ||
-                other.enteredCurrency == enteredCurrency) &&
-            (identical(other.enteredFxRate, enteredFxRate) ||
-                other.enteredFxRate == enteredFxRate) &&
+            (identical(other.paidAmount, paidAmount) ||
+                other.paidAmount == paidAmount) &&
+            (identical(other.paidCurrency, paidCurrency) ||
+                other.paidCurrency == paidCurrency) &&
+            (identical(other.accountAmount, accountAmount) ||
+                other.accountAmount == accountAmount) &&
+            (identical(other.accountCurrency, accountCurrency) ||
+                other.accountCurrency == accountCurrency) &&
             (identical(other.destAmount, destAmount) ||
                 other.destAmount == destAmount) &&
             (identical(other.destCurrency, destCurrency) ||
                 other.destCurrency == destCurrency) &&
-            (identical(other.destFxRate, destFxRate) ||
-                other.destFxRate == destFxRate) &&
             (identical(other.note, note) || other.note == note) &&
             (identical(other.amortization, amortization) ||
                 other.amortization == amortization) &&
@@ -538,7 +452,7 @@ class _$TransactionImpl extends _Transaction {
   }
 
   @override
-  int get hashCode => Object.hashAll([
+  int get hashCode => Object.hash(
     runtimeType,
     id,
     tripId,
@@ -547,20 +461,16 @@ class _$TransactionImpl extends _Transaction {
     sourceAccountId,
     destAccountId,
     categoryId,
-    amount,
-    currency,
-    amountHome,
-    fxRate,
-    enteredAmount,
-    enteredCurrency,
-    enteredFxRate,
+    paidAmount,
+    paidCurrency,
+    accountAmount,
+    accountCurrency,
     destAmount,
     destCurrency,
-    destFxRate,
     note,
     amortization,
     createdAt,
-  ]);
+  );
 
   /// Create a copy of Transaction
   /// with the given fields replaced by the non-null parameter values.
@@ -580,16 +490,12 @@ abstract class _Transaction extends Transaction {
     final String? sourceAccountId,
     final String? destAccountId,
     final String? categoryId,
-    required final double amount,
-    required final String currency,
-    required final double amountHome,
-    required final double fxRate,
-    final double? enteredAmount,
-    final String? enteredCurrency,
-    final double? enteredFxRate,
+    required final double paidAmount,
+    required final String paidCurrency,
+    required final double accountAmount,
+    required final String accountCurrency,
     final double? destAmount,
     final String? destCurrency,
-    final double? destFxRate,
     final String? note,
     final Amortization? amortization,
     required final DateTime createdAt,
@@ -611,25 +517,17 @@ abstract class _Transaction extends Transaction {
   @override
   String? get categoryId;
   @override
-  double get amount;
+  double get paidAmount;
   @override
-  String get currency;
+  String get paidCurrency;
   @override
-  double get amountHome;
+  double get accountAmount;
   @override
-  double get fxRate;
-  @override
-  double? get enteredAmount;
-  @override
-  String? get enteredCurrency;
-  @override
-  double? get enteredFxRate;
+  String get accountCurrency;
   @override
   double? get destAmount;
   @override
   String? get destCurrency;
-  @override
-  double? get destFxRate;
   @override
   String? get note;
   @override

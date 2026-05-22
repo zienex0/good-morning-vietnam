@@ -7,7 +7,7 @@ part of 'set_active_trip_use_case.dart';
 // **************************************************************************
 
 String _$setActiveTripUseCaseHash() =>
-    r'0000000000000000000000000000000000000031';
+    r'ecb063db9cf6caaa03c005d549c0bebd31c18cf2';
 
 /// See also [setActiveTripUseCase].
 @ProviderFor(setActiveTripUseCase)

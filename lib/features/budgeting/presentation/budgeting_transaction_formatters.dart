@@ -31,27 +31,33 @@ String formatBudgetingCurrencyTitle(CurrencyOption currency) {
 }
 
 String formatBudgetingExchangeTitle({
-  required CurrencyOption enteredCurrency,
+  required CurrencyOption paidCurrency,
   required Account account,
 }) {
-  if (enteredCurrency.code == account.currency) {
+  if (paidCurrency.code == account.currency) {
     return 'Same as ${account.currency}';
   }
-  return '${enteredCurrency.code} → ${account.currency}';
+  return '${paidCurrency.code} → ${account.currency}';
 }
 
 String formatBudgetingHomeMoney(double amount, CurrencyCode homeCurrency) {
   final option = budgetingCurrencyByCode(homeCurrency);
-  final fractionDigits = (amount.abs() % 1 == 0) ? 0 : 2;
-  final formatted = amount.toStringAsFixed(fractionDigits);
+  final formatted = _formatMoneyNumber(amount);
   return '${option.symbol}$formatted';
 }
 
 String formatBudgetingNativeMoney(double amount, CurrencyCode currency) {
   final option = budgetingCurrencyByCode(currency);
-  final fractionDigits = (amount.abs() % 1 == 0) ? 0 : 2;
-  final formatted = amount.toStringAsFixed(fractionDigits);
+  final formatted = _formatMoneyNumber(amount);
   return '${option.symbol}$formatted';
+}
+
+String _formatMoneyNumber(double amount) {
+  final fractionDigits = (amount.abs() % 1 == 0) ? 0 : 2;
+  final format = NumberFormat.decimalPattern('en_US')
+    ..minimumFractionDigits = fractionDigits
+    ..maximumFractionDigits = fractionDigits;
+  return format.format(amount);
 }
 
 String formatTripDayLabel(Trip trip, DateTime now) {
@@ -134,16 +140,23 @@ String formatTransactionRowTitle(Transaction transaction) {
   }
 }
 
-String formatTransactionRowAmount({
-  required Transaction transaction,
-  required CurrencyCode homeCurrency,
-}) {
+String formatTransactionRowAmount({required Transaction transaction}) {
   final sign = switch (transaction.type) {
     TransactionType.expense => '-',
     TransactionType.income => '+',
     TransactionType.transfer => '',
   };
-  return '$sign${formatBudgetingHomeMoney(transaction.amountHome, homeCurrency)}';
+  return '$sign${formatBudgetingNativeMoney(transaction.paidAmount, transaction.paidCurrency)}';
+}
+
+String? formatTransactionRowAccountAmount(Transaction transaction) {
+  if (!transaction.hasSeparateAccountAmount) {
+    return null;
+  }
+  return formatBudgetingNativeMoney(
+    transaction.accountAmount,
+    transaction.accountCurrency,
+  );
 }
 
 String formatAmortizationRowValue(Amortization? amortization) {

@@ -50,10 +50,7 @@ class BudgetingAccountsSummarySection extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         for (final account in accounts) ...[
-          BudgetingAccountTile(
-            account: account,
-            transactions: transactions,
-          ),
+          BudgetingAccountTile(account: account, transactions: transactions),
           const Divider(),
         ],
       ],
@@ -98,7 +95,6 @@ class BudgetingAccountTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final balance = computeAccountBalance(
       accountId: account.id,
-      accountCurrency: account.currency,
       openingBalance: account.openingBalance,
       transactions: transactions,
     );

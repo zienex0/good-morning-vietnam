@@ -21,7 +21,7 @@ class BudgetingTransactionFormController
     required String tripId,
     required String accountId,
     required double amount,
-    String? amountCurrency,
+    String? paidCurrency,
   }) async {
     state = const AsyncLoading<void>();
     final result = await ref
@@ -30,7 +30,7 @@ class BudgetingTransactionFormController
           tripId: tripId,
           accountId: accountId,
           amount: amount,
-          amountCurrency: amountCurrency,
+          paidCurrency: paidCurrency,
           occurredAt: DateTime.now(),
         );
     return handleResult(result, 'Top-up creation failed');
@@ -41,7 +41,7 @@ class BudgetingTransactionFormController
     required String accountId,
     required String categoryId,
     required double amount,
-    String? amountCurrency,
+    String? paidCurrency,
     Amortization? amortization,
   }) async {
     state = const AsyncLoading<void>();
@@ -52,7 +52,7 @@ class BudgetingTransactionFormController
           accountId: accountId,
           categoryId: categoryId,
           amount: amount,
-          amountCurrency: amountCurrency,
+          paidCurrency: paidCurrency,
           amortization: amortization,
           occurredAt: DateTime.now(),
         );

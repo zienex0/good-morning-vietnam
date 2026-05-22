@@ -95,7 +95,8 @@ class BudgetingAccountList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = ref.watch(accountsForActiveTripProvider).valueOrNull ??
+    final accounts =
+        ref.watch(accountsForActiveTripProvider).valueOrNull ??
         const <Account>[];
     final visible = accounts
         .where((account) => account.id != excludedAccountId)

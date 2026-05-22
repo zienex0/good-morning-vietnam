@@ -23,18 +23,20 @@ class AppKeyValueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: labelStyle ?? context.mutedText.bodyMedium,
+      child: SizedBox(
+        width: double.infinity,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle ?? context.mutedText.bodyMedium,
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Flexible(
+            const SizedBox(width: AppSpacing.md),
+            Flexible(
               child: Text(
                 value,
                 maxLines: 1,
@@ -43,12 +45,12 @@ class AppKeyValueRow extends StatelessWidget {
                 style: valueStyle ?? context.text.bodyMedium,
               ),
             ),
-          ),
-          if (trailing != null) ...[
-            const SizedBox(width: AppSpacing.xs),
-            trailing!,
+            if (trailing != null) ...[
+              const SizedBox(width: AppSpacing.xs),
+              trailing!,
+            ],
           ],
-        ],
+        ),
       ),
     );
 

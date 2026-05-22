@@ -6,8 +6,7 @@ part of 'delete_trip_use_case.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$deleteTripUseCaseHash() =>
-    r'0000000000000000000000000000000000000033';
+String _$deleteTripUseCaseHash() => r'e6808d781ddb11499e33ae3174d0443e56d254e1';
 
 /// See also [deleteTripUseCase].
 @ProviderFor(deleteTripUseCase)

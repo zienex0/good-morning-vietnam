@@ -36,8 +36,7 @@ class BudgetingOnboardingPage extends ConsumerWidget {
           sliver: SliverToBoxAdapter(
             child: AsyncValueView(
               value: tripsAsync,
-              data: (trips) =>
-                  BudgetingOnboardingBody(trips: trips),
+              data: (trips) => BudgetingOnboardingBody(trips: trips),
             ),
           ),
         ),

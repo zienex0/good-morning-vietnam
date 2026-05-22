@@ -7,7 +7,7 @@ part of 'create_account_use_case.dart';
 // **************************************************************************
 
 String _$createAccountUseCaseHash() =>
-    r'0000000000000000000000000000000000000032';
+    r'b62c0f4c5e079840a471096158157894142ac4fa';
 
 /// See also [createAccountUseCase].
 @ProviderFor(createAccountUseCase)

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_foundation_kit/core/logging/logger.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
@@ -18,7 +16,7 @@ part 'budgeting_trip_form_controller.g.dart';
 @riverpod
 class BudgetingTripFormController extends _$BudgetingTripFormController {
   @override
-  FutureOr<void> build() {}
+  AsyncValue<void> build() => const AsyncData<void>(null);
 
   Future<Trip?> createTrip({
     required String name,
@@ -28,7 +26,9 @@ class BudgetingTripFormController extends _$BudgetingTripFormController {
     double? budgetTotal,
   }) async {
     state = const AsyncLoading<void>();
-    final result = await ref.read(createTripUseCaseProvider).call(
+    final result = await ref
+        .read(createTripUseCaseProvider)
+        .call(
           name: name,
           homeCurrency: homeCurrency,
           startDate: startDate,
@@ -48,10 +48,9 @@ class BudgetingTripFormController extends _$BudgetingTripFormController {
             state = const AsyncData<void>(null);
             return trip;
           case Err(failure: final failure):
-            ref.read(loggerProvider).warn(
-                  'Could not activate created trip',
-                  error: failure,
-                );
+            ref
+                .read(loggerProvider)
+                .warn('Could not activate created trip', error: failure);
             state = AsyncError<void>(failure, StackTrace.current);
             return null;
         }
@@ -73,10 +72,9 @@ class BudgetingTripFormController extends _$BudgetingTripFormController {
     required TripStatus status,
   }) async {
     state = const AsyncLoading<void>();
-    final result = await ref.read(changeTripStatusUseCaseProvider).call(
-          tripId: tripId,
-          newStatus: status,
-        );
+    final result = await ref
+        .read(changeTripStatusUseCaseProvider)
+        .call(tripId: tripId, newStatus: status);
     return _handle(result, 'Trip status change failed');
   }
 
@@ -108,7 +106,9 @@ class BudgetingTripFormController extends _$BudgetingTripFormController {
     required double openingBalance,
   }) async {
     state = const AsyncLoading<void>();
-    final result = await ref.read(createAccountUseCaseProvider).call(
+    final result = await ref
+        .read(createAccountUseCaseProvider)
+        .call(
           tripId: tripId,
           name: name,
           type: type,

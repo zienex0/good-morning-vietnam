@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_trip_form_controller.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_mappers.dart';
@@ -8,6 +10,7 @@ import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/b
 import 'package:flutter_foundation_kit/shared/widgets/app_key_value_row.dart';
 import 'package:flutter_foundation_kit/shared/widgets/section_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class BudgetingSettingsTripSection extends ConsumerWidget {
@@ -72,8 +75,7 @@ class BudgetingSettingsTripSection extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -192,8 +194,7 @@ class BudgetingSettingsBudgetSection extends ConsumerWidget {
             child: const Text('Clear'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -294,8 +295,10 @@ class BudgetingSettingsDangerSection extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
-    await ref
+    final deleted = await ref
         .read(budgetingTripFormControllerProvider.notifier)
         .deleteTrip(tripId: trip.id);
+    if (!context.mounted || !deleted) return;
+    context.go(AppRoutes.onboarding);
   }
 }

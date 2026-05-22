@@ -7,20 +7,20 @@ part of 'change_trip_status_use_case.dart';
 // **************************************************************************
 
 String _$changeTripStatusUseCaseHash() =>
-    r'0000000000000000000000000000000000000034';
+    r'4e341a5f440992767e4f1da81ad00e598529e4eb';
 
 /// See also [changeTripStatusUseCase].
 @ProviderFor(changeTripStatusUseCase)
 final changeTripStatusUseCaseProvider =
     Provider<ChangeTripStatusUseCase>.internal(
-  changeTripStatusUseCase,
-  name: r'changeTripStatusUseCaseProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$changeTripStatusUseCaseHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+      changeTripStatusUseCase,
+      name: r'changeTripStatusUseCaseProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$changeTripStatusUseCaseHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element

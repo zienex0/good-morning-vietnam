@@ -7,7 +7,7 @@ part of 'hive_budgeting_boxes.dart';
 // **************************************************************************
 
 String _$hiveBudgetingBoxesHash() =>
-    r'0000000000000000000000000000000000000001';
+    r'9558b49b0c8a5dfb76f25fada87a2334a8956492';
 
 /// See also [hiveBudgetingBoxes].
 @ProviderFor(hiveBudgetingBoxes)

@@ -42,9 +42,7 @@ class CreateTransferUseCase {
       return const Err(ValidationFailure('Transfer amount must be positive.'));
     }
     if (destAmount != null && destAmount <= 0) {
-      return const Err(
-        ValidationFailure('Received amount must be positive.'),
-      );
+      return const Err(ValidationFailure('Received amount must be positive.'));
     }
     if (sourceAccountId == destAccountId) {
       return const Err(
@@ -87,21 +85,6 @@ class CreateTransferUseCase {
       return const Err(ValidationFailure('Accounts do not belong to trip.'));
     }
 
-    // Source-side conversion to home currency.
-    final sourceConversionResult = await _convertToHomeCurrency(
-      amount: amount,
-      sourceCurrency: sourceAccount.currency,
-      homeCurrency: trip.homeCurrency,
-      date: occurredAt,
-    );
-    final ({double amountHome, double fxRate}) sourceConversion;
-    switch (sourceConversionResult) {
-      case Ok(value: final value):
-        sourceConversion = value;
-      case Err(failure: final failure):
-        return Err(failure);
-    }
-
     // Resolve the destination-side amount (user-supplied or market-converted).
     final double resolvedDestAmount;
     if (sourceAccount.currency == destAccount.currency) {
@@ -123,21 +106,6 @@ class CreateTransferUseCase {
       }
     }
 
-    // Destination-side conversion to home currency.
-    final destConversionResult = await _convertToHomeCurrency(
-      amount: resolvedDestAmount,
-      sourceCurrency: destAccount.currency,
-      homeCurrency: trip.homeCurrency,
-      date: occurredAt,
-    );
-    final ({double amountHome, double fxRate}) destConversion;
-    switch (destConversionResult) {
-      case Ok(value: final value):
-        destConversion = value;
-      case Err(failure: final failure):
-        return Err(failure);
-    }
-
     final transaction = Transaction(
       id: _idGenerator.transactionId(),
       tripId: trip.id,
@@ -145,13 +113,12 @@ class CreateTransferUseCase {
       occurredAt: occurredAt,
       sourceAccountId: sourceAccount.id,
       destAccountId: destAccount.id,
-      amount: amount,
-      currency: sourceAccount.currency,
-      amountHome: sourceConversion.amountHome,
-      fxRate: sourceConversion.fxRate,
+      paidAmount: amount,
+      paidCurrency: sourceAccount.currency,
+      accountAmount: amount,
+      accountCurrency: sourceAccount.currency,
       destAmount: resolvedDestAmount,
       destCurrency: destAccount.currency,
-      destFxRate: destConversion.fxRate,
       note: note,
       createdAt: createdAt ?? DateTime.now(),
     );

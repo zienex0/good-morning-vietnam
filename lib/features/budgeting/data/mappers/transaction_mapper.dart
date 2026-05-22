@@ -10,16 +10,12 @@ Map<String, dynamic> transactionToJson(Transaction transaction) {
     'sourceAccountId': transaction.sourceAccountId,
     'destAccountId': transaction.destAccountId,
     'categoryId': transaction.categoryId,
-    'amount': transaction.amount,
-    'currency': transaction.currency,
-    'amountHome': transaction.amountHome,
-    'fxRate': transaction.fxRate,
-    'enteredAmount': transaction.enteredAmount,
-    'enteredCurrency': transaction.enteredCurrency,
-    'enteredFxRate': transaction.enteredFxRate,
+    'paidAmount': transaction.paidAmount,
+    'paidCurrency': transaction.paidCurrency,
+    'accountAmount': transaction.accountAmount,
+    'accountCurrency': transaction.accountCurrency,
     'destAmount': transaction.destAmount,
     'destCurrency': transaction.destCurrency,
-    'destFxRate': transaction.destFxRate,
     'note': transaction.note,
     'amortization': transaction.amortization == null
         ? null
@@ -33,23 +29,6 @@ Transaction transactionFromJson(Map<String, dynamic> json) {
     (value) => value.name == json['type'] as String,
     orElse: () => TransactionType.expense,
   );
-  final amount = (json['amount'] as num).toDouble();
-  final currency = json['currency'] as String;
-  final amountHome = (json['amountHome'] as num).toDouble();
-  final fxRate = (json['fxRate'] as num).toDouble();
-
-  var destAmount = (json['destAmount'] as num?)?.toDouble();
-  var destCurrency = json['destCurrency'] as String?;
-  var destFxRate = (json['destFxRate'] as num?)?.toDouble();
-
-  // Backfill: pre-dest-snapshot transfer rows are mirrored from the source
-  // side so the new assertions don't reject them on load.
-  if (type == TransactionType.transfer && destAmount == null) {
-    destAmount = amount;
-    destCurrency = currency;
-    destFxRate = fxRate;
-  }
-
   return Transaction(
     id: json['id'] as String,
     tripId: json['tripId'] as String,
@@ -58,16 +37,12 @@ Transaction transactionFromJson(Map<String, dynamic> json) {
     sourceAccountId: json['sourceAccountId'] as String?,
     destAccountId: json['destAccountId'] as String?,
     categoryId: json['categoryId'] as String?,
-    amount: amount,
-    currency: currency,
-    amountHome: amountHome,
-    fxRate: fxRate,
-    enteredAmount: (json['enteredAmount'] as num?)?.toDouble(),
-    enteredCurrency: json['enteredCurrency'] as String?,
-    enteredFxRate: (json['enteredFxRate'] as num?)?.toDouble(),
-    destAmount: destAmount,
-    destCurrency: destCurrency,
-    destFxRate: destFxRate,
+    paidAmount: (json['paidAmount'] as num).toDouble(),
+    paidCurrency: json['paidCurrency'] as String,
+    accountAmount: (json['accountAmount'] as num).toDouble(),
+    accountCurrency: json['accountCurrency'] as String,
+    destAmount: (json['destAmount'] as num?)?.toDouble(),
+    destCurrency: json['destCurrency'] as String?,
     note: json['note'] as String?,
     amortization: json['amortization'] == null
         ? null

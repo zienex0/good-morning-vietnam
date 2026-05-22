@@ -91,12 +91,13 @@ class HiveBudgetingRepository implements BudgetingRepository {
     required String tripId,
     bool includeArchived = false,
   }) async {
-    final accounts = boxes.accounts.values
-        .map(_decodeAccount)
-        .where((account) => account.tripId == tripId)
-        .where((account) => includeArchived || !account.archived)
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final accounts =
+        boxes.accounts.values
+            .map(_decodeAccount)
+            .where((account) => account.tripId == tripId)
+            .where((account) => includeArchived || !account.archived)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
     return Ok(accounts);
   }
 
@@ -144,11 +145,26 @@ class HiveBudgetingRepository implements BudgetingRepository {
   Future<Result<List<Transaction>, Failure>> fetchTransactions({
     required String tripId,
   }) async {
-    final transactions = boxes.transactions.values
-        .map(_decodeTransaction)
-        .where((transaction) => transaction.tripId == tripId)
-        .toList()
-      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    final invalidKeys = <dynamic>[];
+    final transactions = <Transaction>[];
+    for (final key in boxes.transactions.keys) {
+      final raw = boxes.transactions.get(key);
+      if (raw == null) {
+        continue;
+      }
+      try {
+        final transaction = _decodeTransaction(raw);
+        if (transaction.tripId == tripId) {
+          transactions.add(transaction);
+        }
+      } on Object {
+        invalidKeys.add(key);
+      }
+    }
+    if (invalidKeys.isNotEmpty) {
+      await boxes.transactions.deleteAll(invalidKeys);
+    }
+    transactions.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
     return Ok(transactions);
   }
 
@@ -160,7 +176,12 @@ class HiveBudgetingRepository implements BudgetingRepository {
     if (raw == null) {
       return const Err(NotFoundFailure());
     }
-    return Ok(_decodeTransaction(raw));
+    try {
+      return Ok(_decodeTransaction(raw));
+    } on Object {
+      await boxes.transactions.delete(transactionId);
+      return const Err(NotFoundFailure());
+    }
   }
 
   @override

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_metrics_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
-import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_page_frame.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_key_value_row.dart';
@@ -18,6 +17,7 @@ class BudgetingStatsPage extends ConsumerWidget {
     final transactions =
         ref.watch(transactionsForActiveTripProvider).valueOrNull ?? const [];
     final balance = ref.watch(activeTripTotalBalanceProvider).valueOrNull ?? 0;
+    final totalSpend = ref.watch(activeTripTotalSpendProvider).valueOrNull ?? 0;
     final avgSpend =
         ref.watch(activeTripAverageDailySpendProvider).valueOrNull ?? 0;
 
@@ -25,11 +25,8 @@ class BudgetingStatsPage extends ConsumerWidget {
       return const BudgetingPageFrame(title: 'Stats', children: []);
     }
 
-    final totalSpend = transactions
-        .where((transaction) => transaction.type == TransactionType.expense)
-        .fold<double>(0, (sum, transaction) => sum + transaction.amountHome);
     final expenses = transactions
-        .where((transaction) => transaction.type == TransactionType.expense)
+        .where((transaction) => transaction.isExpense)
         .length;
 
     return BudgetingPageFrame(
@@ -54,10 +51,7 @@ class BudgetingStatsPage extends ConsumerWidget {
               label: 'remaining balance',
               value: formatBudgetingHomeMoney(balance, trip.homeCurrency),
             ),
-            AppKeyValueRow(
-              label: 'expenses recorded',
-              value: '$expenses',
-            ),
+            AppKeyValueRow(label: 'expenses recorded', value: '$expenses'),
             AppKeyValueRow(
               label: 'transactions total',
               value: '${transactions.length}',

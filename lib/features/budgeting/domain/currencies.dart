@@ -20,20 +20,26 @@ const List<CurrencyOption> kBudgetingCurrencyCatalog = [
   CurrencyOption(code: 'GBP', symbol: '£', flag: '🇬🇧', name: 'British pound'),
   CurrencyOption(code: 'JPY', symbol: '¥', flag: '🇯🇵', name: 'Japanese yen'),
   CurrencyOption(code: 'PLN', symbol: 'zł', flag: '🇵🇱', name: 'Polish złoty'),
-  CurrencyOption(code: 'VND', symbol: '₫', flag: '🇻🇳', name: 'Vietnamese dong'),
+  CurrencyOption(
+    code: 'VND',
+    symbol: '₫',
+    flag: '🇻🇳',
+    name: 'Vietnamese dong',
+  ),
   CurrencyOption(code: 'THB', symbol: '฿', flag: '🇹🇭', name: 'Thai baht'),
-  CurrencyOption(code: 'KRW', symbol: '₩', flag: '🇰🇷', name: 'South Korean won'),
+  CurrencyOption(
+    code: 'KRW',
+    symbol: '₩',
+    flag: '🇰🇷',
+    name: 'South Korean won',
+  ),
 ];
 
 CurrencyOption budgetingCurrencyByCode(CurrencyCode code) {
   final upper = code.trim().toUpperCase();
   return kBudgetingCurrencyCatalog.firstWhere(
     (option) => option.code == upper,
-    orElse: () => CurrencyOption(
-      code: upper,
-      symbol: upper,
-      flag: '🏳️',
-      name: upper,
-    ),
+    orElse: () =>
+        CurrencyOption(code: upper, symbol: upper, flag: '🏳️', name: upper),
   );
 }

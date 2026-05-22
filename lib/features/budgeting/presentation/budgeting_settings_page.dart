@@ -11,10 +11,7 @@ class BudgetingSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trip = ref.watch(activeTripProvider).valueOrNull;
     if (trip == null) {
-      return const BudgetingPageFrame(
-        title: 'Settings',
-        children: [],
-      );
+      return const BudgetingPageFrame(title: 'Settings', children: []);
     }
     return BudgetingPageFrame(
       title: trip.name,

@@ -6,8 +6,7 @@ part of 'load_trips_use_case.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$loadTripsUseCaseHash() =>
-    r'0000000000000000000000000000000000000030';
+String _$loadTripsUseCaseHash() => r'65a4314263f26d8af35bc667b89201fa82e2e9e8';
 
 /// See also [loadTripsUseCase].
 @ProviderFor(loadTripsUseCase)

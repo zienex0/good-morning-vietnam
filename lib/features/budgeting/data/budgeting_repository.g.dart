@@ -7,7 +7,7 @@ part of 'budgeting_repository.dart';
 // **************************************************************************
 
 String _$budgetingRepositoryHash() =>
-    r'48c5f71c2bcbf17848c7c4e93d21133f6aa437a2';
+    r'971fc321aa897aa71f12cf2028d364f13b93822d';
 
 /// See also [budgetingRepository].
 @ProviderFor(budgetingRepository)

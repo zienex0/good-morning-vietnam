@@ -10,7 +10,6 @@ import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_amount_section.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_empty_shell.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_summary_panel.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_back_button.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_bottom_action_bar.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_key_value_row.dart';
@@ -28,7 +27,7 @@ class BudgetingTransferPage extends ConsumerStatefulWidget {
 }
 
 class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
-  final amountController = TextEditingController(text: '50');
+  final amountController = TextEditingController();
   final destAmountController = TextEditingController();
   String? sourceAccountId;
   String? destAccountId;
@@ -60,8 +59,9 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
     }
 
     sourceAccountId ??= accounts.first.id;
-    destAccountId ??=
-        accounts.firstWhere((account) => account.id != sourceAccountId).id;
+    destAccountId ??= accounts
+        .firstWhere((account) => account.id != sourceAccountId)
+        .id;
 
     final sourceAccount = accounts.firstWhere(
       (account) => account.id == sourceAccountId,
@@ -82,8 +82,9 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
     final formState = ref.watch(budgetingTransactionFormControllerProvider);
     final amount = double.tryParse(amountController.text) ?? 0;
     final destAmountText = destAmountController.text.trim();
-    final destAmount =
-        destAmountText.isEmpty ? null : double.tryParse(destAmountText);
+    final destAmount = destAmountText.isEmpty
+        ? null
+        : double.tryParse(destAmountText);
     final isCrossCurrency = sourceAccount.currency != destAccount.currency;
 
     return AppSliverPage(
@@ -94,12 +95,12 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
           onPressed: formState.isLoading || amount <= 0
               ? null
               : () => _submit(
-                    tripId,
-                    sourceAccount,
-                    destAccount,
-                    amount,
-                    destAmount,
-                  ),
+                  tripId,
+                  sourceAccount,
+                  destAccount,
+                  amount,
+                  destAmount,
+                ),
           child: Text(
             formatBudgetingPrimaryAction(
               action: formState.isLoading ? 'Saving...' : 'Transfer',
@@ -142,23 +143,18 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
                 TextField(
                   controller: destAmountController,
                   decoration: InputDecoration(
-                    labelText:
-                        'Received in ${destAccount.currency} (optional)',
+                    labelText: 'Received in ${destAccount.currency} (optional)',
                     hintText:
                         'Leave blank to use market rate at ${formatBudgetingCurrencyTitle(destCurrency)}',
                     prefixText: '${destCurrency.symbol} ',
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (_) => setState(() {}),
                 ),
               ],
               const SizedBox(height: AppSpacing.lg),
-              const BudgetingTransactionSummaryPanel(
-                icon: Icons.swap_horiz,
-                title: 'Move money',
-                body: 'Records money moving between two trip accounts.',
-              ),
             ],
           ),
         ),
@@ -182,9 +178,9 @@ class BudgetingTransferPageState extends ConsumerState<BudgetingTransferPage> {
           amount: amount,
           destAmount: destAmount,
         );
-    if (!context.mounted || !created) return;
+    if (!mounted || !created) return;
     AppSnackBars.success(context, 'Transfer saved.');
-    context.pop();
+    context.go(AppRoutes.home);
   }
 
   Future<void> _pickSource(

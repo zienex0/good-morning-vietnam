@@ -7,6 +7,7 @@ import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_reposit
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'active_trip_providers.g.dart';
@@ -77,9 +78,9 @@ Future<List<Transaction>> transactionsForActiveTrip(
   if (id == null) {
     return const [];
   }
-  final result = await ref.watch(loadTransactionsUseCaseProvider).call(
-        tripId: id,
-      );
+  final result = await ref
+      .watch(loadTransactionsUseCaseProvider)
+      .call(tripId: id);
   switch (result) {
     case Ok(value: final value):
       return value;

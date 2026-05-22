@@ -7,22 +7,24 @@ part of 'budgeting_trip_form_controller.dart';
 // **************************************************************************
 
 String _$budgetingTripFormControllerHash() =>
-    r'0000000000000000000000000000000000000040';
+    r'60252ce009d029c434f685544ecea432765fe88e';
 
 /// See also [BudgetingTripFormController].
 @ProviderFor(BudgetingTripFormController)
 final budgetingTripFormControllerProvider =
-    AutoDisposeAsyncNotifierProvider<BudgetingTripFormController, void>
-        .internal(
-  BudgetingTripFormController.new,
-  name: r'budgetingTripFormControllerProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$budgetingTripFormControllerHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+    AutoDisposeNotifierProvider<
+      BudgetingTripFormController,
+      AsyncValue<void>
+    >.internal(
+      BudgetingTripFormController.new,
+      name: r'budgetingTripFormControllerProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$budgetingTripFormControllerHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
-typedef _$BudgetingTripFormController = AutoDisposeAsyncNotifier<void>;
+typedef _$BudgetingTripFormController = AutoDisposeNotifier<AsyncValue<void>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

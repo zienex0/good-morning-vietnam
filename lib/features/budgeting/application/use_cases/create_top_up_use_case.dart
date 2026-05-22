@@ -27,7 +27,7 @@ class CreateTopUpUseCase {
     required String accountId,
     required double amount,
     required DateTime occurredAt,
-    CurrencyCode? amountCurrency,
+    CurrencyCode? paidCurrency,
     String? categoryId,
     String? note,
     DateTime? createdAt,
@@ -59,7 +59,7 @@ class CreateTopUpUseCase {
       return const Err(ValidationFailure('Account does not belong to trip.'));
     }
 
-    final enteredCurrency = amountCurrency?.trim().toUpperCase();
+    final enteredCurrency = paidCurrency?.trim().toUpperCase();
     final transactionCurrency = enteredCurrency?.isEmpty ?? true
         ? account.currency
         : enteredCurrency!;
@@ -78,20 +78,6 @@ class CreateTopUpUseCase {
         return Err(failure);
     }
 
-    final conversionResult = await _convertToHomeCurrency(
-      amount: accountConversion.amountHome,
-      sourceCurrency: account.currency,
-      homeCurrency: trip.homeCurrency,
-      date: occurredAt,
-    );
-    final ({double amountHome, double fxRate}) conversion;
-    switch (conversionResult) {
-      case Ok(value: final value):
-        conversion = value;
-      case Err(failure: final failure):
-        return Err(failure);
-    }
-
     final transaction = Transaction(
       id: _idGenerator.transactionId(),
       tripId: trip.id,
@@ -99,17 +85,10 @@ class CreateTopUpUseCase {
       occurredAt: occurredAt,
       destAccountId: account.id,
       categoryId: categoryId,
-      amount: accountConversion.amountHome,
-      currency: account.currency,
-      amountHome: conversion.amountHome,
-      fxRate: conversion.fxRate,
-      enteredAmount: transactionCurrency == account.currency ? null : amount,
-      enteredCurrency: transactionCurrency == account.currency
-          ? null
-          : transactionCurrency,
-      enteredFxRate: transactionCurrency == account.currency
-          ? null
-          : accountConversion.fxRate,
+      paidAmount: amount,
+      paidCurrency: transactionCurrency,
+      accountAmount: accountConversion.amountHome,
+      accountCurrency: account.currency,
       note: note,
       createdAt: createdAt ?? DateTime.now(),
     );

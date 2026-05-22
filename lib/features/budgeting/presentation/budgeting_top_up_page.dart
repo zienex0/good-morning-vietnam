@@ -10,7 +10,6 @@ import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_amount_section.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_empty_shell.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/widgets/budgeting_transaction_summary_panel.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_back_button.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_bottom_action_bar.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_key_value_row.dart';
@@ -27,7 +26,7 @@ class BudgetingTopUpPage extends ConsumerStatefulWidget {
 }
 
 class BudgetingTopUpPageState extends ConsumerState<BudgetingTopUpPage> {
-  final amountController = TextEditingController(text: '100');
+  final amountController = TextEditingController();
   String? selectedAccountId;
   String? enteredCurrency;
 
@@ -107,20 +106,15 @@ class BudgetingTopUpPageState extends ConsumerState<BudgetingTopUpPage> {
                 onTap: () => _pickAccount(account, accounts),
               ),
               AppKeyValueRow(
-                label: 'Exchange from',
+                label: 'Paid currency',
                 value: formatBudgetingExchangeTitle(
-                  enteredCurrency: currency,
+                  paidCurrency: currency,
                   account: account,
                 ),
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
                 onTap: _pickCurrency,
               ),
               const SizedBox(height: AppSpacing.lg),
-              const BudgetingTransactionSummaryPanel(
-                icon: Icons.flash_on,
-                title: 'Instant top-up',
-                body: 'Adds money to the selected trip account.',
-              ),
             ],
           ),
         ),
@@ -135,21 +129,18 @@ class BudgetingTopUpPageState extends ConsumerState<BudgetingTopUpPage> {
           tripId: tripId,
           accountId: account.id,
           amount: amount,
-          amountCurrency: enteredCurrency,
+          paidCurrency: enteredCurrency,
         );
-    if (!context.mounted || !created) return;
+    if (!mounted || !created) return;
     AppSnackBars.success(context, 'Top-up saved.');
-    context.pop();
+    context.go(AppRoutes.home);
   }
 
   Future<void> _pickAccount(Account current, List<Account> accounts) async {
     final result = await context.push<String>(
       Uri(
         path: AppRoutes.selectAccount,
-        queryParameters: {
-          'selected': current.id,
-          'title': 'Top up account',
-        },
+        queryParameters: {'selected': current.id, 'title': 'Top up account'},
       ).toString(),
     );
     if (result == null || !mounted) return;
@@ -171,7 +162,7 @@ class BudgetingTopUpPageState extends ConsumerState<BudgetingTopUpPage> {
         path: AppRoutes.selectCurrency,
         queryParameters: {
           'selected': enteredCurrency!,
-          'title': 'Exchange currency',
+          'title': 'Paid currency',
         },
       ).toString(),
     );

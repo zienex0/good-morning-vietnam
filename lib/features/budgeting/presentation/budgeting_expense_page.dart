@@ -30,7 +30,7 @@ class BudgetingExpensePage extends ConsumerStatefulWidget {
 }
 
 class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
-  final amountController = TextEditingController(text: '24');
+  final amountController = TextEditingController();
   String? selectedAccountId;
   String? enteredCurrency;
   String selectedCategoryId = kBudgetingDefaultCategories.first.id;
@@ -112,9 +112,9 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
                 onTap: () => _pickAccount(account, accounts),
               ),
               AppKeyValueRow(
-                label: 'Exchange from',
+                label: 'Paid currency',
                 value: formatBudgetingExchangeTitle(
-                  enteredCurrency: currency,
+                  paidCurrency: currency,
                   account: account,
                 ),
                 trailing: const Icon(Icons.unfold_more, size: AppSizes.iconSm),
@@ -150,22 +150,19 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
           accountId: account.id,
           categoryId: selectedCategoryId,
           amount: amount,
-          amountCurrency: enteredCurrency,
+          paidCurrency: enteredCurrency,
           amortization: amortization,
         );
-    if (!context.mounted || !created) return;
+    if (!mounted || !created) return;
     AppSnackBars.success(context, 'Expense saved.');
-    context.pop();
+    context.go(AppRoutes.home);
   }
 
   Future<void> _pickAccount(Account current, List<Account> accounts) async {
     final result = await context.push<String>(
       Uri(
         path: AppRoutes.selectAccount,
-        queryParameters: {
-          'selected': current.id,
-          'title': 'Payment source',
-        },
+        queryParameters: {'selected': current.id, 'title': 'Payment source'},
       ).toString(),
     );
     if (result == null || !mounted) return;
@@ -187,7 +184,7 @@ class BudgetingExpensePageState extends ConsumerState<BudgetingExpensePage> {
         path: AppRoutes.selectCurrency,
         queryParameters: {
           'selected': enteredCurrency!,
-          'title': 'Exchange currency',
+          'title': 'Paid currency',
         },
       ).toString(),
     );

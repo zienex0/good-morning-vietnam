@@ -6,7 +6,6 @@ import 'package:flutter_foundation_kit/features/budgeting/application/active_tri
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_chart_data.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_transaction_mappers.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_trend_chart.dart';
@@ -61,8 +60,7 @@ class BudgetingMetricStrip extends ConsumerWidget {
         ),
         BudgetingMetricPill(
           icon: Icons.local_fire_department_outlined,
-          label:
-              '${formatBudgetingHomeMoney(avgSpend, trip.homeCurrency)}/day',
+          label: '${formatBudgetingHomeMoney(avgSpend, trip.homeCurrency)}/day',
         ),
         BudgetingMetricPill(
           icon: Icons.calendar_today_outlined,
@@ -103,11 +101,7 @@ class BudgetingProgressPanel extends ConsumerWidget {
     if (budgetTotal == null || budgetTotal <= 0) {
       return const SizedBox.shrink();
     }
-    final transactions =
-        ref.watch(transactionsForActiveTripProvider).valueOrNull ?? const [];
-    final spend = transactions
-        .where((transaction) => transaction.type == TransactionType.expense)
-        .fold<double>(0, (sum, transaction) => sum + transaction.amountHome);
+    final spend = ref.watch(activeTripTotalSpendProvider).valueOrNull ?? 0;
     final progress = (spend / budgetTotal).clamp(0.0, 1.0);
     final percent = (progress * 100).round();
     return Column(
@@ -196,19 +190,11 @@ class BudgetingActionButton extends StatelessWidget {
 }
 
 class BudgetingSpendTrendSection extends ConsumerWidget {
-  const BudgetingSpendTrendSection({required this.trip, super.key});
-
-  final Trip trip;
+  const BudgetingSpendTrendSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactions =
-        ref.watch(transactionsForActiveTripProvider).valueOrNull ?? const [];
-    final points = cumulativeSpendTrend(
-      trip: trip,
-      transactions: transactions,
-      asOf: DateTime.now(),
-    );
+    final points = ref.watch(activeTripSpendTrendProvider).valueOrNull ?? [];
     if (points.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -227,9 +213,7 @@ class BudgetingSpendTrendSection extends ConsumerWidget {
 }
 
 class BudgetingTransactionsSection extends ConsumerWidget {
-  const BudgetingTransactionsSection({required this.trip, super.key});
-
-  final Trip trip;
+  const BudgetingTransactionsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -256,7 +240,6 @@ class BudgetingTransactionsSection extends ConsumerWidget {
             BudgetingTransactionTile(
               transaction: transaction,
               account: _accountFor(transaction, accounts),
-              homeCurrency: trip.homeCurrency,
             ),
             const Divider(),
           ],
@@ -278,17 +261,16 @@ class BudgetingTransactionTile extends StatelessWidget {
   const BudgetingTransactionTile({
     required this.transaction,
     required this.account,
-    required this.homeCurrency,
     super.key,
   });
 
   final Transaction transaction;
   final Account? account;
-  final String homeCurrency;
 
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.type == TransactionType.income;
+    final accountAmount = formatTransactionRowAccountAmount(transaction);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
@@ -323,15 +305,21 @@ class BudgetingTransactionTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Text(
-            formatTransactionRowAmount(
-              transaction: transaction,
-              homeCurrency: homeCurrency,
-            ),
-            style: context.text.bodyLarge?.copyWith(
-              color: isIncome ? AppColors.success : AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatTransactionRowAmount(transaction: transaction),
+                style: context.text.bodyLarge?.copyWith(
+                  color: isIncome ? AppColors.success : AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (accountAmount != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(accountAmount, style: context.mutedText.bodySmall),
+              ],
+            ],
           ),
         ],
       ),

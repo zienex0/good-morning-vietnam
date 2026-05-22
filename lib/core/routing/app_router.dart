@@ -26,8 +26,8 @@ part 'app_router.g.dart';
 GoRouter appRouter(AppRouterRef ref) {
   final refresh = _RouterRefreshNotifier();
   ref
-    ..listen(activeTripIdProvider, (_, __) => refresh.notify())
-    ..listen(tripsListProvider, (_, __) => refresh.notify());
+    ..listen(activeTripIdProvider, (_, _) => refresh.notify())
+    ..listen(tripsListProvider, (_, _) => refresh.notify());
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -41,7 +41,12 @@ GoRouter appRouter(AppRouterRef ref) {
       }
       final atOnboarding = state.matchedLocation == AppRoutes.onboarding;
       final atNewTrip = state.matchedLocation == AppRoutes.newTrip;
-      if (activeId == null && !atOnboarding && !atNewTrip) {
+      final atCurrencyPicker =
+          state.matchedLocation == AppRoutes.selectCurrency;
+      if (activeId == null &&
+          !atOnboarding &&
+          !atNewTrip &&
+          !atCurrencyPicker) {
         return AppRoutes.onboarding;
       }
       if (activeId != null && atOnboarding) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
@@ -29,10 +31,7 @@ class BudgetingTripDrawer extends ConsumerWidget {
             const DrawerSectionTitle('YOUR TRIPS'),
             const SizedBox(height: AppSpacing.md),
             if (trips.isEmpty)
-              Text(
-                'No trips yet.',
-                style: context.mutedText.bodyMedium,
-              )
+              Text('No trips yet.', style: context.mutedText.bodyMedium)
             else
               for (final trip in trips)
                 DrawerTripTile(trip: trip, isActive: trip.id == activeId),
@@ -42,7 +41,7 @@ class BudgetingTripDrawer extends ConsumerWidget {
               label: 'start new trip',
               onTap: () {
                 Navigator.pop(context);
-                context.push(AppRoutes.newTrip);
+                unawaited(context.push(AppRoutes.newTrip));
               },
             ),
           ],
@@ -64,11 +63,7 @@ class DrawerSectionTitle extends StatelessWidget {
 }
 
 class DrawerTripTile extends ConsumerWidget {
-  const DrawerTripTile({
-    required this.trip,
-    required this.isActive,
-    super.key,
-  });
+  const DrawerTripTile({required this.trip, required this.isActive, super.key});
 
   final Trip trip;
   final bool isActive;
@@ -92,11 +87,7 @@ class DrawerTripTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _activate(
-    BuildContext context,
-    WidgetRef ref,
-    Trip trip,
-  ) async {
+  Future<void> _activate(BuildContext context, WidgetRef ref, Trip trip) async {
     Navigator.pop(context);
     final controller = ref.read(budgetingTripFormControllerProvider.notifier);
     final ok = await controller.activateTrip(trip.id);

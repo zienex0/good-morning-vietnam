@@ -71,19 +71,16 @@ void main() {
         occurredAt: DateTime(2026, 5, 20, 9),
         sourceAccountId: 'account-1',
         categoryId: 'category-1',
-        amount: 680,
-        currency: 'JPY',
-        amountHome: 4.2,
-        fxRate: 0.0062,
-        enteredAmount: 90000,
-        enteredCurrency: 'VND',
-        enteredFxRate: 0.00015,
+        paidAmount: 90000,
+        paidCurrency: 'VND',
+        accountAmount: 13.5,
+        accountCurrency: 'PLN',
         createdAt: DateTime(2026, 5, 20, 9, 2),
       );
 
       expect(transaction.isExpense, isTrue);
       expect(transaction.isTransfer, isFalse);
-      expect(transaction.hasEnteredCurrency, isTrue);
+      expect(transaction.hasSeparateAccountAmount, isTrue);
     });
 
     test('models a transfer with source and destination accounts', () {
@@ -94,13 +91,12 @@ void main() {
         occurredAt: DateTime(2026, 5, 20, 10),
         sourceAccountId: 'account-1',
         destAccountId: 'account-2',
-        amount: 10000,
-        currency: 'JPY',
-        amountHome: 62,
-        fxRate: 0.0062,
+        paidAmount: 10000,
+        paidCurrency: 'JPY',
+        accountAmount: 10000,
+        accountCurrency: 'JPY',
         destAmount: 10000,
         destCurrency: 'JPY',
-        destFxRate: 0.0062,
         createdAt: DateTime(2026, 5, 20, 10, 1),
       );
 
@@ -116,19 +112,19 @@ void main() {
         occurredAt: DateTime(2026, 5, 9, 14),
         sourceAccountId: 'account-1',
         categoryId: 'food',
-        amount: 70,
-        currency: 'USD',
-        amountHome: 70,
-        fxRate: 1,
+        paidAmount: 70,
+        paidCurrency: 'USD',
+        accountAmount: 70,
+        accountCurrency: 'USD',
         createdAt: DateTime(2026, 5, 9),
       );
 
       expect(transaction.isAmortized, isFalse);
       expect(transaction.spreadDayCount, 1);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 9)), 70);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 10)), 0);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 8)), 0);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 9)), 70);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 9)), 70);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 10)), 0);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 8)), 0);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 9)), 70);
     });
 
     test('an amortized expense spreads evenly across its window', () {
@@ -139,25 +135,25 @@ void main() {
         occurredAt: DateTime(2026, 5, 9, 14),
         sourceAccountId: 'account-1',
         categoryId: 'lodging',
-        amount: 70,
-        currency: 'USD',
-        amountHome: 70,
-        fxRate: 1,
+        paidAmount: 70,
+        paidCurrency: 'USD',
+        accountAmount: 70,
+        accountCurrency: 'USD',
         amortization: const Amortization(unit: AmortizationUnit.days, count: 7),
         createdAt: DateTime(2026, 5, 9),
       );
 
       expect(transaction.isAmortized, isTrue);
       expect(transaction.spreadDayCount, 7);
-      expect(transaction.amountHomePerDay, 10);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 8)), 0);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 9)), 10);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 15)), 10);
-      expect(transaction.amountHomeOnDay(DateTime(2026, 5, 16)), 0);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 8)), 0);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 9)), 10);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 12)), 40);
-      expect(transaction.amountHomeThrough(DateTime(2026, 5, 30)), 70);
+      expect(transaction.paidAmountPerDay, 10);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 8)), 0);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 9)), 10);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 15)), 10);
+      expect(transaction.paidAmountOnDay(DateTime(2026, 5, 16)), 0);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 8)), 0);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 9)), 10);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 12)), 40);
+      expect(transaction.paidAmountThrough(DateTime(2026, 5, 30)), 70);
     });
   });
 
