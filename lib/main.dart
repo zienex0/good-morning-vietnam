@@ -17,6 +17,7 @@ Future<void> main() async {
 
   final logContainer = ProviderContainer();
   final log = logContainer.read(loggerProvider);
+
   FlutterError.onError = (details) {
     log.error(
       details.exceptionAsString(),
@@ -26,26 +27,19 @@ Future<void> main() async {
     FlutterError.presentError(details);
   };
 
-  await runZonedGuarded(
-    () async {
-      PlatformDispatcher.instance.onError = (error, stack) {
-        log.error('Uncaught platform error', error: error, stackTrace: stack);
-        return true;
-      };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    log.error('Uncaught platform error', error: error, stackTrace: stack);
+    return true;
+  };
 
-      await Hive.initFlutter();
-      final boxes = await openHiveBudgetingBoxes();
+  await Hive.initFlutter();
+  final boxes = await openHiveBudgetingBoxes();
 
-      runApp(
-        ProviderScope(
-          overrides: [hiveBudgetingBoxesProvider.overrideWithValue(boxes)],
-          child: const MainApp(),
-        ),
-      );
-    },
-    (error, stack) {
-      log.error('Uncaught zone error', error: error, stackTrace: stack);
-    },
+  runApp(
+    ProviderScope(
+      overrides: [hiveBudgetingBoxesProvider.overrideWithValue(boxes)],
+      child: const MainApp(),
+    ),
   );
 }
 

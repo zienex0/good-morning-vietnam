@@ -51,12 +51,12 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                               label: 'Edit name',
                               icon: Icons.edit_outlined,
                               onPressed: () async {
-                                final nameController = TextEditingController(
-                                  text: account.account.name,
-                                );
+                                String currentName = account.account.name;
                                 final messenger = ScaffoldMessenger.of(context);
+
                                 final edited = await AppBottomSheet.show<bool>(
                                   context,
+                                  isScrollControlled: true,
                                   child: Builder(
                                     builder: (sheetContext) {
                                       return Padding(
@@ -68,15 +68,18 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.stretch,
                                           children: [
-                                            TextField(
-                                              controller: nameController,
+                                            TextFormField(
+                                              initialValue: currentName,
                                               autofocus: true,
                                               textCapitalization:
                                                   TextCapitalization.words,
                                               decoration: const InputDecoration(
                                                 labelText: 'Account name',
                                               ),
+                                              onChanged: (value) =>
+                                                  currentName = value,
                                             ),
+
                                             const SizedBox(
                                               height: AppSpacing.lg,
                                             ),
@@ -95,7 +98,7 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                                     .editAccount(
                                                       accountId:
                                                           account.account.id,
-                                                      name: nameController.text,
+                                                      name: currentName,
                                                     );
                                                 if (saved) {
                                                   navigator.pop(true);
@@ -108,7 +111,6 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                     },
                                   ),
                                 );
-                                nameController.dispose();
                                 if (edited == true) {
                                   messenger
                                     ..hideCurrentSnackBar()

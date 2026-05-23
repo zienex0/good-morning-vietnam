@@ -30,6 +30,7 @@ abstract final class AppBottomSheet {
   }) {
     return showModalBottomSheet<T>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: isScrollControlled,
       builder: (context) => _SheetContainer(child: child),
     );
@@ -46,6 +47,7 @@ abstract final class AppActionSheet {
   }) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => _SheetContainer(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -94,10 +96,13 @@ class _SheetContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+        padding: EdgeInsets.only(bottom: AppSpacing.lg + bottomInset),
+
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [const _SheetHandle(), child],
