@@ -1,25 +1,30 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/convert_to_home_currency_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/transaction_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'create_expense_use_case.g.dart';
 
 class CreateExpenseUseCase {
   const CreateExpenseUseCase({
-    required BudgetingRepository repository,
+    required TripRepository tripRepository,
+    required AccountRepository accountRepository,
+    required TransactionRepository transactionRepository,
     required ConvertToHomeCurrencyUseCase convertToHomeCurrency,
     required BudgetingIdGenerator idGenerator,
-  }) : _repository = repository,
+  }) : _tripRepository = tripRepository,
+       _accountRepository = accountRepository,
+       _transactionRepository = transactionRepository,
        _convertToHomeCurrency = convertToHomeCurrency,
        _idGenerator = idGenerator;
 
-  final BudgetingRepository _repository;
+  final TripRepository _tripRepository;
+  final AccountRepository _accountRepository;
+  final TransactionRepository _transactionRepository;
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
   final BudgetingIdGenerator _idGenerator;
 
@@ -41,7 +46,7 @@ class CreateExpenseUseCase {
       return const Err(ValidationFailure('Expense category is required.'));
     }
 
-    final tripResult = await _repository.fetchTrip(tripId: tripId);
+    final tripResult = await _tripRepository.fetchTrip(tripId: tripId);
     final Trip trip;
     switch (tripResult) {
       case Ok(value: final value):
@@ -50,7 +55,7 @@ class CreateExpenseUseCase {
         return Err(failure);
     }
 
-    final accountResult = await _repository.fetchAccountById(
+    final accountResult = await _accountRepository.fetchAccountById(
       accountId: accountId,
     );
     final Account account;
@@ -99,15 +104,6 @@ class CreateExpenseUseCase {
       createdAt: createdAt ?? DateTime.now(),
     );
 
-    return _repository.createTransaction(transaction);
+    return _transactionRepository.createTransaction(transaction);
   }
-}
-
-@Riverpod(keepAlive: true)
-CreateExpenseUseCase createExpenseUseCase(CreateExpenseUseCaseRef ref) {
-  return CreateExpenseUseCase(
-    repository: ref.watch(budgetingRepositoryProvider),
-    convertToHomeCurrency: ref.watch(convertToHomeCurrencyUseCaseProvider),
-    idGenerator: ref.watch(budgetingIdGeneratorProvider),
-  );
 }

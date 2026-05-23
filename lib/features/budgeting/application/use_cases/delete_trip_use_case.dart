@@ -1,23 +1,45 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/transaction_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 
-part 'delete_trip_use_case.g.dart';
-
+/// Deletes a trip and everything that belongs to it, coordinating the three
+/// repositories. Clears the active trip when it was the one removed.
 class DeleteTripUseCase {
-  const DeleteTripUseCase(this._repository);
+  const DeleteTripUseCase({
+    required TripRepository tripRepository,
+    required AccountRepository accountRepository,
+    required TransactionRepository transactionRepository,
+  }) : _tripRepository = tripRepository,
+       _accountRepository = accountRepository,
+       _transactionRepository = transactionRepository;
 
-  final BudgetingRepository _repository;
+  final TripRepository _tripRepository;
+  final AccountRepository _accountRepository;
+  final TransactionRepository _transactionRepository;
 
-  Future<Result<void, Failure>> call({required String tripId}) {
-    if (tripId.trim().isEmpty) {
-      return Future.value(const Err(ValidationFailure('Trip id is required.')));
+  Future<Result<void, Failure>> call({required String tripId}) async {
+    final transactionsResult = await _transactionRepository
+        .deleteTransactionsForTrip(tripId: tripId);
+    if (transactionsResult case Err(failure: final failure)) {
+      return Err(failure);
     }
-    return _repository.deleteTrip(tripId: tripId);
-  }
-}
 
-@Riverpod(keepAlive: true)
-DeleteTripUseCase deleteTripUseCase(DeleteTripUseCaseRef ref) {
-  return DeleteTripUseCase(ref.watch(budgetingRepositoryProvider));
+    final accountsResult = await _accountRepository.deleteAccountsForTrip(
+      tripId: tripId,
+    );
+    if (accountsResult case Err(failure: final failure)) {
+      return Err(failure);
+    }
+
+    final tripResult = await _tripRepository.deleteTrip(tripId: tripId);
+    if (tripResult case Err(failure: final failure)) {
+      return Err(failure);
+    }
+
+    if (_tripRepository.getActiveTripId() == tripId) {
+      await _tripRepository.setActiveTripId(null);
+    }
+    return const Ok(null);
+  }
 }

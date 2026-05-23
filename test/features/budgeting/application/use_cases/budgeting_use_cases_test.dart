@@ -10,11 +10,11 @@ import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_transfer_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/create_trip_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/edit_trip_use_case.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/get_transaction_by_id_use_case.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/load_transactions_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/exchange_rate_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/transaction_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/exchange_rate.dart';
@@ -34,12 +34,10 @@ void main() {
         currency: 'JPY',
         openingBalance: 0,
       );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [account],
-      );
       final useCase = CreateExpenseUseCase(
-        repository: repository,
+        tripRepository: FakeTripRepository(trips: [trip]),
+        accountRepository: FakeAccountRepository(accounts: [account]),
+        transactionRepository: FakeTransactionRepository(),
         convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
           FakeExchangeRateRepository(rate: 0.0062),
         ),
@@ -77,12 +75,10 @@ void main() {
           currency: 'PLN',
           openingBalance: 0,
         );
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          accounts: [account],
-        );
         final useCase = CreateExpenseUseCase(
-          repository: repository,
+          tripRepository: FakeTripRepository(trips: [trip]),
+          accountRepository: FakeAccountRepository(accounts: [account]),
+          transactionRepository: FakeTransactionRepository(),
           convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
             PairExchangeRateRepository({'VND:PLN': 0.00015}),
           ),
@@ -118,12 +114,10 @@ void main() {
         currency: 'JPY',
         openingBalance: 0,
       );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [account],
-      );
       final useCase = CreateTopUpUseCase(
-        repository: repository,
+        tripRepository: FakeTripRepository(trips: [trip]),
+        accountRepository: FakeAccountRepository(accounts: [account]),
+        transactionRepository: FakeTransactionRepository(),
         convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
           FakeExchangeRateRepository(rate: 0.006),
         ),
@@ -149,27 +143,6 @@ void main() {
       expect(transaction.accountCurrency, 'JPY');
     });
 
-    test('loads transactions and fetches one by id', () async {
-      final trip = testTrip();
-      final transaction = testExpense(paidAmount: 12);
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        transactions: [transaction],
-      );
-
-      final transactions = expectOk(
-        await LoadTransactionsUseCase(repository)(tripId: trip.id),
-      );
-      final byId = expectOk(
-        await GetTransactionByIdUseCase(repository)(
-          transactionId: transaction.id,
-        ),
-      );
-
-      expect(transactions, [transaction]);
-      expect(byId, transaction);
-    });
-
     test('calculates total account balance in home currency', () async {
       final trip = testTrip();
       const usdAccount = Account(
@@ -188,28 +161,28 @@ void main() {
         currency: 'JPY',
         openingBalance: 10000,
       );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [usdAccount, jpyAccount],
-        transactions: [
-          testExpense(),
-          testTopUp(
-            destAccountId: 'jpy',
-            accountAmount: 20,
-            accountCurrency: 'JPY',
-          ),
-          testTransfer(accountAmount: 30, destAmount: 30, destCurrency: 'JPY'),
-        ],
-      );
-      final useCase = CalculateTotalAccountsBalanceUseCase(
-        repository: repository,
-        convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-          FakeExchangeRateRepository(rate: 0.006),
-        ),
-      );
 
       final total = expectOk(
-        await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 21)),
+        await const CalculateTotalAccountsBalanceUseCase(
+          ConvertToHomeCurrencyUseCase(FakeExchangeRateRepository(rate: 0.006)),
+        )(
+          trip: trip,
+          accounts: [usdAccount, jpyAccount],
+          transactions: [
+            testExpense(),
+            testTopUp(
+              destAccountId: 'jpy',
+              accountAmount: 20,
+              accountCurrency: 'JPY',
+            ),
+            testTransfer(
+              accountAmount: 30,
+              destAmount: 30,
+              destCurrency: 'JPY',
+            ),
+          ],
+          asOf: DateTime(2026, 5, 21),
+        ),
       );
 
       expect(total, closeTo(120.3, 0.001));
@@ -217,25 +190,22 @@ void main() {
 
     test('calculates average daily spend for elapsed trip days', () async {
       final trip = testTrip();
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        transactions: [
-          testExpense(paidAmount: 40),
-          testExpense(
-            id: 'txn-2',
-            paidAmount: 60,
-            occurredAt: DateTime(2026, 5, 12),
-          ),
-        ],
-      );
 
       final average = expectOk(
-        await CalculateAverageDailySpendUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 1),
-          ),
-        )(tripId: trip.id, asOf: DateTime(2026, 5, 12, 23)),
+        await const CalculateAverageDailySpendUseCase(
+          ConvertToHomeCurrencyUseCase(FakeExchangeRateRepository(rate: 1)),
+        )(
+          trip: trip,
+          transactions: [
+            testExpense(paidAmount: 40),
+            testExpense(
+              id: 'txn-2',
+              paidAmount: 60,
+              occurredAt: DateTime(2026, 5, 12),
+            ),
+          ],
+          asOf: DateTime(2026, 5, 12, 23),
+        ),
       );
 
       expect(average, 25);
@@ -245,24 +215,23 @@ void main() {
       'converts spend metrics from paid facts into the trip currency',
       () async {
         final trip = testTrip();
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          transactions: [
-            testExpense(
-              paidAmount: 22000,
-              paidCurrency: 'VND',
-              accountAmount: 0.84,
+
+        final total = expectOk(
+          await const CalculateTotalSpendUseCase(
+            ConvertToHomeCurrencyUseCase(
+              PairExchangeRateRepository({'VND:USD': 0.000038}),
             ),
-          ],
-        );
-        final useCase = CalculateTotalSpendUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            PairExchangeRateRepository({'VND:USD': 0.000038}),
+          )(
+            trip: trip,
+            transactions: [
+              testExpense(
+                paidAmount: 22000,
+                paidCurrency: 'VND',
+                accountAmount: 0.84,
+              ),
+            ],
           ),
         );
-
-        final total = expectOk(await useCase(tripId: trip.id));
 
         expect(total, closeTo(0.836, 0.001));
       },
@@ -272,29 +241,27 @@ void main() {
       'spend trend converts the paid amount across amortized days',
       () async {
         final trip = testTrip();
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          transactions: [
-            testExpense(
-              paidAmount: 70000,
-              paidCurrency: 'VND',
-              accountAmount: 2.66,
-              amortization: const Amortization(
-                unit: AmortizationUnit.days,
-                count: 7,
-              ),
-            ),
-          ],
-        );
-        final useCase = CalculateSpendTrendUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            PairExchangeRateRepository({'VND:USD': 0.000038}),
-          ),
-        );
 
         final points = expectOk(
-          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 11)),
+          await const CalculateSpendTrendUseCase(
+            ConvertToHomeCurrencyUseCase(
+              PairExchangeRateRepository({'VND:USD': 0.000038}),
+            ),
+          )(
+            trip: trip,
+            transactions: [
+              testExpense(
+                paidAmount: 70000,
+                paidCurrency: 'VND',
+                accountAmount: 2.66,
+                amortization: const Amortization(
+                  unit: AmortizationUnit.days,
+                  count: 7,
+                ),
+              ),
+            ],
+            asOf: DateTime(2026, 5, 11),
+          ),
         );
 
         expect(points.map((point) => point.value).toList(), [
@@ -315,12 +282,10 @@ void main() {
         currency: 'USD',
         openingBalance: 0,
       );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [account],
-      );
       final useCase = CreateExpenseUseCase(
-        repository: repository,
+        tripRepository: FakeTripRepository(trips: [trip]),
+        accountRepository: FakeAccountRepository(accounts: [account]),
+        transactionRepository: FakeTransactionRepository(),
         convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
           FakeExchangeRateRepository(rate: 1),
         ),
@@ -351,27 +316,24 @@ void main() {
     test('average daily spend uses only the elapsed slice of a spread '
         'expense', () async {
       final trip = testTrip();
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        transactions: [
-          // 70 spread over 7 days from the trip start day.
-          testExpense(
-            paidAmount: 70,
-            amortization: const Amortization(
-              unit: AmortizationUnit.days,
-              count: 7,
-            ),
-          ),
-        ],
-      );
 
       final average = expectOk(
-        await CalculateAverageDailySpendUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 1),
-          ),
-        )(tripId: trip.id, asOf: DateTime(2026, 5, 9, 23)),
+        await const CalculateAverageDailySpendUseCase(
+          ConvertToHomeCurrencyUseCase(FakeExchangeRateRepository(rate: 1)),
+        )(
+          trip: trip,
+          // 70 spread over 7 days from the trip start day.
+          transactions: [
+            testExpense(
+              paidAmount: 70,
+              amortization: const Amortization(
+                unit: AmortizationUnit.days,
+                count: 7,
+              ),
+            ),
+          ],
+          asOf: DateTime(2026, 5, 9, 23),
+        ),
       );
 
       // One day elapsed: 10 accrued / 1 day, not the full 70.
@@ -390,28 +352,24 @@ void main() {
           currency: 'USD',
           openingBalance: 500,
         );
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          accounts: [account],
-          transactions: [
-            testExpense(
-              paidAmount: 70,
-              amortization: const Amortization(
-                unit: AmortizationUnit.days,
-                count: 7,
-              ),
-            ),
-          ],
-        );
-        final useCase = CalculateTotalAccountsBalanceUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 1),
-          ),
-        );
 
         final total = expectOk(
-          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 21)),
+          await const CalculateTotalAccountsBalanceUseCase(
+            ConvertToHomeCurrencyUseCase(FakeExchangeRateRepository(rate: 1)),
+          )(
+            trip: trip,
+            accounts: [account],
+            transactions: [
+              testExpense(
+                paidAmount: 70,
+                amortization: const Amortization(
+                  unit: AmortizationUnit.days,
+                  count: 7,
+                ),
+              ),
+            ],
+            asOf: DateTime(2026, 5, 21),
+          ),
         );
 
         expect(total, 430);
@@ -428,30 +386,26 @@ void main() {
         currency: 'USD',
         openingBalance: 200,
       );
-      final repository = FakeBudgetingRepository(
-        trips: [trip],
-        accounts: [account],
-        transactions: [
-          testExpense(paidAmount: 100, occurredAt: DateTime(2026, 5, 10)),
-        ],
-      );
-      final useCase = CalculateDaysLeftUseCase(
-        calculateAverageDailySpend: CalculateAverageDailySpendUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 1),
-          ),
-        ),
-        calculateTotalAccountsBalance: CalculateTotalAccountsBalanceUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            FakeExchangeRateRepository(rate: 1),
-          ),
-        ),
+      const convert = ConvertToHomeCurrencyUseCase(
+        FakeExchangeRateRepository(rate: 1),
       );
 
       final daysLeft = expectOk(
-        await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 10)),
+        await const CalculateDaysLeftUseCase(
+          calculateAverageDailySpend: CalculateAverageDailySpendUseCase(
+            convert,
+          ),
+          calculateTotalAccountsBalance: CalculateTotalAccountsBalanceUseCase(
+            convert,
+          ),
+        )(
+          trip: trip,
+          accounts: [account],
+          transactions: [
+            testExpense(paidAmount: 100, occurredAt: DateTime(2026, 5, 10)),
+          ],
+          asOf: DateTime(2026, 5, 10),
+        ),
       );
 
       expect(daysLeft, 2);
@@ -477,12 +431,12 @@ void main() {
           currency: 'JPY',
           openingBalance: 0,
         );
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          accounts: [usdAccount, jpyAccount],
-        );
         final useCase = CreateTransferUseCase(
-          repository: repository,
+          tripRepository: FakeTripRepository(trips: [trip]),
+          accountRepository: FakeAccountRepository(
+            accounts: [usdAccount, jpyAccount],
+          ),
+          transactionRepository: FakeTransactionRepository(),
           convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
             PairExchangeRateRepository({}),
           ),
@@ -545,20 +499,18 @@ void main() {
           destCurrency: 'JPY',
           createdAt: DateTime(2026, 5, 18),
         );
-        final repository = FakeBudgetingRepository(
-          trips: [trip],
-          accounts: [usdAccount, jpyAccount],
-          transactions: [transfer],
-        );
-        final useCase = CalculateTotalAccountsBalanceUseCase(
-          repository: repository,
-          convertToHomeCurrency: const ConvertToHomeCurrencyUseCase(
-            PairExchangeRateRepository({'JPY:USD': 0.0062}),
-          ),
-        );
 
         final total = expectOk(
-          await useCase(tripId: trip.id, asOf: DateTime(2026, 5, 18)),
+          await const CalculateTotalAccountsBalanceUseCase(
+            ConvertToHomeCurrencyUseCase(
+              PairExchangeRateRepository({'JPY:USD': 0.0062}),
+            ),
+          )(
+            trip: trip,
+            accounts: [usdAccount, jpyAccount],
+            transactions: [transfer],
+            asOf: DateTime(2026, 5, 18),
+          ),
         );
         // 500 USD opening - 100 USD source side + 15800 * 0.0062 = 497.96
         expect(total, closeTo(497.96, 0.001));
@@ -566,10 +518,10 @@ void main() {
     );
 
     test('creates and edits trips', () async {
-      final repository = FakeBudgetingRepository();
+      final tripRepository = FakeTripRepository();
       final created = expectOk(
         await CreateTripUseCase(
-          repository: repository,
+          repository: tripRepository,
           idGenerator: const FixedBudgetingIdGenerator(
             fixedTripId: 'trip-created',
           ),
@@ -586,7 +538,7 @@ void main() {
       expect(created.homeCurrency, 'USD');
 
       final edited = expectOk(
-        await EditTripUseCase(repository)(
+        await EditTripUseCase(tripRepository)(
           created.copyWith(name: 'Japan + Korea 2026', budgetTotal: 1800),
         ),
       );
@@ -747,127 +699,23 @@ class FixedBudgetingIdGenerator implements BudgetingIdGenerator {
   String accountId() => fixedAccountId;
 }
 
-class FakeBudgetingRepository implements BudgetingRepository {
-  FakeBudgetingRepository({
-    Iterable<Trip> trips = const [],
-    Iterable<Account> accounts = const [],
-    Iterable<Transaction> transactions = const [],
-  }) : _trips = {for (final trip in trips) trip.id: trip},
-       _accounts = {for (final account in accounts) account.id: account},
-       _transactions = {
-         for (final transaction in transactions) transaction.id: transaction,
-       };
+class FakeTripRepository implements TripRepository {
+  FakeTripRepository({Iterable<Trip> trips = const []})
+    : _trips = {for (final trip in trips) trip.id: trip};
 
   final Map<String, Trip> _trips;
-  final Map<String, Account> _accounts;
-  final Map<String, Transaction> _transactions;
   String? _activeTripId;
 
-  @override
-  Future<Result<List<Trip>, Failure>> listTrips() async {
-    final list = _trips.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return Ok(list);
-  }
+  List<Trip> _sorted() =>
+      _trips.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   @override
-  Future<Result<List<Transaction>, Failure>> fetchTransactions({
-    required String tripId,
-  }) async {
-    final transactions =
-        _transactions.values
-            .where((transaction) => transaction.tripId == tripId)
-            .toList()
-          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
-    return Ok(transactions);
-  }
+  Future<Result<List<Trip>, Failure>> listTrips() async => Ok(_sorted());
 
   @override
-  Future<Result<Transaction, Failure>> fetchTransactionById({
-    required String transactionId,
-  }) async {
-    final transaction = _transactions[transactionId];
-    if (transaction == null) return const Err(NotFoundFailure());
-    return Ok(transaction);
-  }
-
-  @override
-  Future<Result<Transaction, Failure>> createTransaction(
-    Transaction transaction,
-  ) async {
-    if (!_trips.containsKey(transaction.tripId)) {
-      return const Err(NotFoundFailure());
-    }
-    _transactions[transaction.id] = transaction;
-    return Ok(transaction);
-  }
-
-  @override
-  Future<Result<List<Account>, Failure>> fetchAccounts({
-    required String tripId,
-    bool includeArchived = false,
-  }) async {
-    final accounts =
-        _accounts.values
-            .where((account) => account.tripId == tripId)
-            .where((account) => includeArchived || !account.archived)
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-    return Ok(accounts);
-  }
-
-  @override
-  Future<Result<Account, Failure>> fetchAccountById({
-    required String accountId,
-  }) async {
-    final account = _accounts[accountId];
-    if (account == null) return const Err(NotFoundFailure());
-    return Ok(account);
-  }
-
-  @override
-  Future<Result<Account, Failure>> createAccount(Account account) async {
-    if (!_trips.containsKey(account.tripId)) {
-      return const Err(NotFoundFailure());
-    }
-    _accounts[account.id] = account;
-    return Ok(account);
-  }
-
-  @override
-  Future<Result<Account, Failure>> updateAccount(Account account) async {
-    if (!_accounts.containsKey(account.id)) {
-      return const Err(NotFoundFailure());
-    }
-    _accounts[account.id] = account;
-    return Ok(account);
-  }
-
-  @override
-  Future<Result<void, Failure>> deleteAccount({
-    required String accountId,
-  }) async {
-    if (!_accounts.containsKey(accountId)) {
-      return const Err(NotFoundFailure());
-    }
-    _accounts.remove(accountId);
-    return const Ok(null);
-  }
-
-  @override
-  Future<Result<void, Failure>> deleteAccountWithTransactions({
-    required String accountId,
-  }) async {
-    if (!_accounts.containsKey(accountId)) {
-      return const Err(NotFoundFailure());
-    }
-    _transactions.removeWhere(
-      (_, transaction) =>
-          transaction.sourceAccountId == accountId ||
-          transaction.destAccountId == accountId,
-    );
-    _accounts.remove(accountId);
-    return const Ok(null);
+  Stream<List<Trip>> watchTrips() async* {
+    yield _sorted();
   }
 
   @override
@@ -885,22 +733,15 @@ class FakeBudgetingRepository implements BudgetingRepository {
 
   @override
   Future<Result<Trip, Failure>> updateTrip(Trip trip) async {
-    if (!_trips.containsKey(trip.id)) {
-      return const Err(NotFoundFailure());
-    }
+    if (!_trips.containsKey(trip.id)) return const Err(NotFoundFailure());
     _trips[trip.id] = trip;
     return Ok(trip);
   }
 
   @override
   Future<Result<void, Failure>> deleteTrip({required String tripId}) async {
-    if (!_trips.containsKey(tripId)) {
-      return const Err(NotFoundFailure());
-    }
-    _accounts.removeWhere((_, account) => account.tripId == tripId);
-    _transactions.removeWhere((_, txn) => txn.tripId == tripId);
+    if (!_trips.containsKey(tripId)) return const Err(NotFoundFailure());
     _trips.remove(tripId);
-    if (_activeTripId == tripId) _activeTripId = null;
     return const Ok(null);
   }
 
@@ -910,5 +751,139 @@ class FakeBudgetingRepository implements BudgetingRepository {
   @override
   Future<void> setActiveTripId(String? tripId) async {
     _activeTripId = tripId;
+  }
+
+  @override
+  Stream<String?> watchActiveTripId() async* {
+    yield _activeTripId;
+  }
+}
+
+class FakeAccountRepository implements AccountRepository {
+  FakeAccountRepository({Iterable<Account> accounts = const []})
+    : _accounts = {for (final account in accounts) account.id: account};
+
+  final Map<String, Account> _accounts;
+
+  List<Account> _forTrip(String tripId, {required bool includeArchived}) =>
+      _accounts.values
+          .where((account) => account.tripId == tripId)
+          .where((account) => includeArchived || !account.archived)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  @override
+  Future<Result<List<Account>, Failure>> fetchAccounts({
+    required String tripId,
+    bool includeArchived = false,
+  }) async => Ok(_forTrip(tripId, includeArchived: includeArchived));
+
+  @override
+  Stream<List<Account>> watchAccounts({
+    required String tripId,
+    bool includeArchived = false,
+  }) async* {
+    yield _forTrip(tripId, includeArchived: includeArchived);
+  }
+
+  @override
+  Future<Result<Account, Failure>> fetchAccountById({
+    required String accountId,
+  }) async {
+    final account = _accounts[accountId];
+    if (account == null) return const Err(NotFoundFailure());
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<Account, Failure>> createAccount(Account account) async {
+    _accounts[account.id] = account;
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<Account, Failure>> updateAccount(Account account) async {
+    if (!_accounts.containsKey(account.id)) return const Err(NotFoundFailure());
+    _accounts[account.id] = account;
+    return Ok(account);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteAccount({
+    required String accountId,
+  }) async {
+    if (!_accounts.containsKey(accountId)) return const Err(NotFoundFailure());
+    _accounts.remove(accountId);
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteAccountsForTrip({
+    required String tripId,
+  }) async {
+    _accounts.removeWhere((_, account) => account.tripId == tripId);
+    return const Ok(null);
+  }
+}
+
+class FakeTransactionRepository implements TransactionRepository {
+  FakeTransactionRepository({Iterable<Transaction> transactions = const []})
+    : _transactions = {
+        for (final transaction in transactions) transaction.id: transaction,
+      };
+
+  final Map<String, Transaction> _transactions;
+
+  List<Transaction> _forTrip(String tripId) =>
+      _transactions.values
+          .where((transaction) => transaction.tripId == tripId)
+          .toList()
+        ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+
+  @override
+  Future<Result<List<Transaction>, Failure>> fetchTransactions({
+    required String tripId,
+  }) async => Ok(_forTrip(tripId));
+
+  @override
+  Stream<List<Transaction>> watchTransactions({required String tripId}) async* {
+    yield _forTrip(tripId);
+  }
+
+  @override
+  Future<Result<Transaction, Failure>> fetchTransactionById({
+    required String transactionId,
+  }) async {
+    final transaction = _transactions[transactionId];
+    if (transaction == null) return const Err(NotFoundFailure());
+    return Ok(transaction);
+  }
+
+  @override
+  Future<Result<Transaction, Failure>> createTransaction(
+    Transaction transaction,
+  ) async {
+    _transactions[transaction.id] = transaction;
+    return Ok(transaction);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteTransactionsForTrip({
+    required String tripId,
+  }) async {
+    _transactions.removeWhere((_, transaction) => transaction.tripId == tripId);
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteTransactionsForAccount({
+    required String accountId,
+  }) async {
+    _transactions.removeWhere(
+      (_, transaction) =>
+          transaction.sourceAccountId == accountId ||
+          transaction.destAccountId == accountId,
+    );
+    return const Ok(null);
   }
 }

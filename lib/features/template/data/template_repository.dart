@@ -3,9 +3,6 @@ import 'dart:async';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_receipt.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_track.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'template_repository.g.dart';
 
 abstract interface class TemplateRepository {
   Future<Result<ProjectReceipt, Failure>> fetchReceipt({
@@ -51,11 +48,4 @@ class FakeTemplateRepository implements TemplateRepository {
     yield _confirmedCount;
     yield* _countController.stream;
   }
-}
-
-@Riverpod(keepAlive: true)
-TemplateRepository templateRepository(TemplateRepositoryRef ref) {
-  final repo = FakeTemplateRepository();
-  ref.onDispose(repo.dispose);
-  return repo;
 }

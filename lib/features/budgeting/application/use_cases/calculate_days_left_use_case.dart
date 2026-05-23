@@ -1,10 +1,13 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_average_daily_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/calculate_total_accounts_balance_use_case.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dart';
+import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 
-part 'calculate_days_left_use_case.g.dart';
-
+/// Estimated days the current balance lasts at the average daily spend.
+/// Composes [CalculateTotalAccountsBalanceUseCase] and
+/// [CalculateAverageDailySpendUseCase].
 class CalculateDaysLeftUseCase {
   const CalculateDaysLeftUseCase({
     required CalculateAverageDailySpendUseCase calculateAverageDailySpend,
@@ -16,11 +19,15 @@ class CalculateDaysLeftUseCase {
   final CalculateTotalAccountsBalanceUseCase _calculateTotalAccountsBalance;
 
   Future<Result<int?, Failure>> call({
-    required String tripId,
+    required Trip trip,
+    required List<Account> accounts,
+    required List<Transaction> transactions,
     required DateTime asOf,
   }) async {
     final balanceResult = await _calculateTotalAccountsBalance(
-      tripId: tripId,
+      trip: trip,
+      accounts: accounts,
+      transactions: transactions,
       asOf: asOf,
     );
     final double balance;
@@ -32,7 +39,8 @@ class CalculateDaysLeftUseCase {
     }
 
     final averageResult = await _calculateAverageDailySpend(
-      tripId: tripId,
+      trip: trip,
+      transactions: transactions,
       asOf: asOf,
     );
     final double averageDailySpend;
@@ -52,18 +60,4 @@ class CalculateDaysLeftUseCase {
 
     return Ok((balance / averageDailySpend).floor());
   }
-}
-
-@Riverpod(keepAlive: true)
-CalculateDaysLeftUseCase calculateDaysLeftUseCase(
-  CalculateDaysLeftUseCaseRef ref,
-) {
-  return CalculateDaysLeftUseCase(
-    calculateAverageDailySpend: ref.watch(
-      calculateAverageDailySpendUseCaseProvider,
-    ),
-    calculateTotalAccountsBalance: ref.watch(
-      calculateTotalAccountsBalanceUseCaseProvider,
-    ),
-  );
 }

@@ -23,8 +23,11 @@ lib/
     widgets/
   features/
     feature_name/
+      data/                      # repositories (one per aggregate) — no providers
+      domain/                    # pure models + derived values — no providers
       application/
-      domain/
+        feature_name_providers.dart   # the ONLY home for this feature's providers
+        use_cases/               # plain classes: validation / orchestration / math
       presentation/
         widgets/
 ```
@@ -32,9 +35,12 @@ lib/
 - `core/` is for app-wide primitives that should not know about features.
 - `shared/widgets/` is for reusable UI components, not feature-specific
   sections.
-- `features/*/domain` owns business concepts and derived values.
-- `features/*/application` owns Riverpod state, intent methods, and side-effect
-  coordination.
+- `features/*/data` owns repositories (split by aggregate, e.g. trip / account /
+  transaction). Each exposes reactive `watch*` streams plus CRUD. No providers.
+- `features/*/domain` owns business concepts and derived values. No providers.
+- `features/*/application` owns the feature's Riverpod providers (all in
+  `<feature>_providers.dart`) and its use cases. Providers live here and nowhere
+  else.
 - `features/*/presentation` owns pages, formatters, presentation mappers, and
   feature widgets.
 
@@ -235,9 +241,15 @@ Before writing `_anything` inside a page file, answer in order:
 
 ## State And Data Flow
 
-- Use Riverpod consistently for app state.
-- Widgets send intent: `submit`, `refresh`, `setTrack`, `incrementSeats`.
-- Controllers expose app state and intent-level methods.
+- All of a feature's providers live in one file: `application/<feature>_providers.dart`.
+- State is feature-level, not per-screen. Expose the feature's data as a small
+  set of providers; pages gather whatever they need.
+- Reads flow from repository `watch*` streams through data providers, so a write
+  fans out to every listener automatically. There is no manual invalidation.
+- Writes go through notifiers (one per aggregate) that expose intent methods:
+  `createTrip`, `editAccount`, `createExpense`.
+- A screen's combined data is assembled into a plain record inside a view
+  provider — never a "summary" aggregation class.
 - Business state lives outside widgets.
 - Ephemeral UI state may stay in widgets when it is truly visual: focus,
   text controllers, hover, scroll position, tab selection.
@@ -267,35 +279,53 @@ onPressed: () =>
 
 ## Use Cases
 
-Use cases sit between controllers and repositories. A controller never imports
-a repository directly — it always goes through a named use case.
+Use cases are **plain classes** under `application/use_cases/` that hold data
+manipulation. They are reserved for real logic — never a one-line forward of a
+single repository call.
 
-- Use cases name the intent: `load`, `submit`, `confirm`, `watch`, `sync`.
-- Use cases own business validation that belongs above the repository boundary.
-- Use cases are the right place to combine multiple repositories, transform
-  results, or apply pre-checks before the repository is called.
-- A one-line use case that only forwards a repository call is acceptable when
-  the operation name itself is the value. It may grow logic later without
-  touching the controller.
+- Reach for a use case when you need validation, orchestration across multiple
+  repositories, or a derived calculation.
+- Use cases name the intent: `createExpense`, `calculateDaysLeft`, `deleteTrip`.
+- Use cases never get their own provider. A notifier or a view provider
+  constructs the use case from the repository providers it already reads.
+- Calculation use cases are pure: they take already-loaded data (trip,
+  accounts, transactions) and return a `Result`, so they recompute reactively
+  when their source providers emit.
+- Reads with no logic skip the use-case layer entirely: a data provider watches
+  the repository stream directly.
 
-### Do / Don't: Controllers Import Use Cases, Not Repositories
+### Do / Don't: Use Cases Are Plain Classes, Not Providers
 
-**Don't** — controller bypasses the use case layer:
+**Don't** — a provider wrapping a use case, or a pass-through use case:
 
 ```dart
-// application/template_controller.dart
-import '.../data/template_repository.dart'; // ← wrong
+@riverpod                                  // ← no provider per use case
+LoadTripsUseCase loadTripsUseCase(Ref ref) =>
+    LoadTripsUseCase(ref.watch(tripRepositoryProvider));
 
-final result = await ref.read(templateRepositoryProvider).fetchReceipt(...);
+class LoadTripsUseCase {                    // ← pure forward, delete it
+  Future<Result<List<Trip>, Failure>> call() => _repository.listTrips();
+}
 ```
 
-**Do** — controller always goes through a named use case:
+**Do** — read straight from the repository stream; keep use cases for real logic:
 
 ```dart
-import '.../use_cases/load_template_receipt_use_case.dart'; // ← right
+// application/budgeting_providers.dart — reads need no use case
+@riverpod
+Stream<List<Trip>> trips(Ref ref) =>
+    ref.watch(tripRepositoryProvider).watchTrips();
 
-final loadReceipt = ref.watch(loadTemplateReceiptUseCaseProvider);
-final result = await loadReceipt(track: track, seats: seats);
+// a notifier constructs the use case it needs, no provider involved
+final result = await CreateExpenseUseCase(
+  tripRepository: ref.read(tripRepositoryProvider),
+  accountRepository: ref.read(accountRepositoryProvider),
+  transactionRepository: ref.read(transactionRepositoryProvider),
+  convertToHomeCurrency: ConvertToHomeCurrencyUseCase(
+    ref.read(exchangeRateRepositoryProvider),
+  ),
+  idGenerator: ref.read(budgetingIdGeneratorProvider),
+).call(/* ... */);
 ```
 
 ### Do / Don't: Business Validation Belongs In The Use Case
@@ -322,23 +352,21 @@ if (seats < 1) {
 return _repository.fetchReceipt(track: track, seats: seats);
 ```
 
-### Do / Don't: Use Cases Work For Streams Too
+### Do / Don't: Live Data Comes From Repository Streams
 
-When a feature needs live data, the repository exposes a `Stream` and the use
-case forwards it. The controller's `build()` returns the stream and Riverpod
-handles the subscription, converting each emission to `AsyncValue<T>`
-automatically. No `StreamSubscription`, no `dispose`.
+Live reads need no use case. The repository exposes a `Stream`, a data provider
+returns it, and Riverpod handles the subscription, converting each emission to
+`AsyncValue<T>` automatically. No `StreamSubscription`, no `dispose`, no manual
+invalidation — a write to the repository re-emits and every listener updates.
 
 ```dart
-// use case
-Stream<List<Order>> call(String userId) =>
-    _repository.watchOrders(userId);
+// data/order_repository.dart
+Stream<List<Order>> watchOrders(String userId);
 
-// controller
-@override
-Stream<List<Order>> build(String userId) {
-  return ref.watch(watchOrdersUseCaseProvider).call(userId);
-}
+// application/orders_providers.dart
+@riverpod
+Stream<List<Order>> orders(Ref ref, String userId) =>
+    ref.watch(orderRepositoryProvider).watchOrders(userId);
 ```
 
 ## Routing

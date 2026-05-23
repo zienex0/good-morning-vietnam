@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/l10n/app_localizations.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/template/application/template_controller.dart';
+import 'package:flutter_foundation_kit/features/template/application/template_providers.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_receipt.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_track.dart';
 import 'package:flutter_foundation_kit/features/template/presentation/template_formatters.dart';
@@ -28,7 +28,7 @@ class TemplateHomePage extends ConsumerWidget {
       data: (state) {
         final receipt = state.receipt;
         final confirmedCount =
-            ref.watch(templateConfirmedCountProvider).valueOrNull ?? 0;
+            ref.watch(templateConfirmedCountProvider).value ?? 0;
 
         return AppSliverPage(
           title: context.l10n.appName,

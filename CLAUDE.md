@@ -20,12 +20,23 @@ If it's worth naming, it's worth a file. If it isn't worth a file, inline it.
 
 If you find yourself typing `Widget _build`, stop. That is the smell.
 
-### 2. Controllers never import repositories
+### 2. Riverpod lives in one place; use cases hold the logic
 
-**Controllers go through use cases. Always.** If you find yourself writing
-`import '.../data/some_repository.dart'` inside `application/`, stop. Create a
-use case instead. Business validation, pre-checks, and any logic that sits
-above the repository boundary belong in the use case, not the controller.
+**All of a feature's providers live in `application/<feature>_providers.dart`** —
+the DI (repository) providers, the reactive data providers, the per-screen view
+providers, and the notifiers. Never declare a provider in `data/` or `domain/`.
+
+State is **feature-level, not per-screen**: a feature has its repositories, a
+small set of providers that expose their data, and a few notifiers for writes.
+Pages are pure consumers — they `ref.watch` what they need and own nothing.
+
+**Data manipulation lives in use cases** — plain classes under
+`application/use_cases/` that handle validation, multi-repository orchestration,
+or derived calculations. A use case is a plain class; never wrap one in its own
+provider, and never create a use case that only forwards a single repository
+call. Don't build "summary" aggregation classes — assemble a screen's data into
+a plain record inside its view provider. Reads flow from repository streams;
+writes go through notifiers; there is no manual provider invalidation.
 
 ## Decision Flow Before Writing Anything Private
 
@@ -33,8 +44,8 @@ Before writing `_anything` inside a page file, answer in order:
 
 1. **String for display?** → `presentation/<feature>_formatters.dart`.
 2. **Enum → icon / color / label?** → `presentation/<feature>_mappers.dart`.
-3. **Filtering / sorting / math on domain data?** → a getter on state, or a
-   method on the domain model.
+3. **Filtering / sorting / math on domain data?** → a method on the domain
+   model, or a use case when it spans entities or needs a repository.
 4. **A chunk of UI bigger than ~15 lines, or used twice?** → a public widget
    in `presentation/widgets/<name>.dart`.
 5. **Used by a second feature?** → move to `lib/shared/widgets/`.

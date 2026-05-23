@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/use_cases/delete_trip_use_case.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/hive_budgeting_boxes.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/hive_budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/transaction_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,10 +32,13 @@ void main() {
   });
 
   test(
-    'deleteTrip removes the trip, accounts, transactions, and active id',
+    'DeleteTripUseCase removes the trip, accounts, transactions, and active id',
     () async {
       final boxes = await openHiveBudgetingBoxes();
-      final repository = HiveBudgetingRepository(boxes: boxes);
+      final tripRepository = HiveTripRepository(boxes: boxes);
+      final accountRepository = HiveAccountRepository(boxes: boxes);
+      final transactionRepository = HiveTransactionRepository(boxes: boxes);
+
       final trip = testTrip();
       final otherTrip = testTrip().copyWith(
         id: 'trip-2',
@@ -53,46 +59,55 @@ void main() {
         tripId: otherTrip.id,
       );
 
-      expectOk(await repository.createTrip(trip));
-      expectOk(await repository.createTrip(otherTrip));
-      expectOk(await repository.createAccount(cash));
-      expectOk(await repository.createAccount(archived));
-      expectOk(await repository.createAccount(otherAccount));
+      expectOk(await tripRepository.createTrip(trip));
+      expectOk(await tripRepository.createTrip(otherTrip));
+      expectOk(await accountRepository.createAccount(cash));
+      expectOk(await accountRepository.createAccount(archived));
+      expectOk(await accountRepository.createAccount(otherAccount));
       expectOk(
-        await repository.createTransaction(
+        await transactionRepository.createTransaction(
           testExpense(id: 'expense-1', sourceAccountId: cash.id),
         ),
       );
-      await repository.setActiveTripId(trip.id);
+      await tripRepository.setActiveTripId(trip.id);
 
-      expectOk(await repository.deleteTrip(tripId: trip.id));
+      expectOk(
+        await DeleteTripUseCase(
+          tripRepository: tripRepository,
+          accountRepository: accountRepository,
+          transactionRepository: transactionRepository,
+        ).call(tripId: trip.id),
+      );
 
       expect(
-        await repository.fetchTrip(tripId: trip.id),
+        await tripRepository.fetchTrip(tripId: trip.id),
         isA<Err<Trip, Failure>>(),
       );
-      expectOk(await repository.fetchTrip(tripId: otherTrip.id));
+      expectOk(await tripRepository.fetchTrip(tripId: otherTrip.id));
       expect(
         expectOk(
-          await repository.fetchAccounts(
+          await accountRepository.fetchAccounts(
             tripId: trip.id,
             includeArchived: true,
           ),
         ),
         isEmpty,
       );
-      expect(expectOk(await repository.fetchAccounts(tripId: otherTrip.id)), [
-        otherAccount,
-      ]);
       expect(
-        expectOk(await repository.fetchTransactions(tripId: trip.id)),
+        expectOk(await accountRepository.fetchAccounts(tripId: otherTrip.id)),
+        [otherAccount],
+      );
+      expect(
+        expectOk(
+          await transactionRepository.fetchTransactions(tripId: trip.id),
+        ),
         isEmpty,
       );
       expect(
-        await repository.fetchAccountById(accountId: cash.id),
+        await accountRepository.fetchAccountById(accountId: cash.id),
         isA<Err<Account, Failure>>(),
       );
-      expect(repository.getActiveTripId(), isNull);
+      expect(tripRepository.getActiveTripId(), isNull);
     },
   );
 }

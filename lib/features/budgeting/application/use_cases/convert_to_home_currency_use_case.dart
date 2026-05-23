@@ -1,9 +1,6 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'convert_to_home_currency_use_case.g.dart';
 
 class ConvertToHomeCurrencyUseCase {
   const ConvertToHomeCurrencyUseCase(this._exchangeRates);
@@ -36,13 +33,4 @@ class ConvertToHomeCurrencyUseCase {
       Err(failure: final failure) => Err(failure),
     };
   }
-}
-
-@Riverpod(keepAlive: true)
-ConvertToHomeCurrencyUseCase convertToHomeCurrencyUseCase(
-  ConvertToHomeCurrencyUseCaseRef ref,
-) {
-  return ConvertToHomeCurrencyUseCase(
-    ref.watch(exchangeRateRepositoryProvider),
-  );
 }

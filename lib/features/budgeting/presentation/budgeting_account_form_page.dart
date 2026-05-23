@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/active_trip_providers.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_account_controller.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_formatters.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
@@ -32,7 +31,7 @@ class BudgetingAccountFormPageState
   @override
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
-    final formState = ref.watch(budgetingAccountControllerProvider);
+    final formState = ref.watch(budgetingAccountProvider);
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
@@ -60,7 +59,7 @@ class BudgetingAccountFormPageState
                       }
 
                       final account = await ref
-                          .read(budgetingAccountControllerProvider.notifier)
+                          .read(budgetingAccountProvider.notifier)
                           .createAccount(
                             tripId: trip.id,
                             name: nameController.text,

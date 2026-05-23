@@ -4,6 +4,35 @@ import 'package:flutter_foundation_kit/features/budgeting/domain/transaction.dar
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 
+typedef BudgetingTransactionDayGroup = ({
+  DateTime date,
+  List<Transaction> transactions,
+});
+
+/// Groups [transactions] by calendar day, most recent day first. Display-only
+/// grouping for the transaction lists.
+List<BudgetingTransactionDayGroup> groupBudgetingTransactionsByDay(
+  List<Transaction> transactions,
+) {
+  final groups = <DateTime, List<Transaction>>{};
+  for (final transaction in transactions) {
+    final day = DateTime(
+      transaction.occurredAt.year,
+      transaction.occurredAt.month,
+      transaction.occurredAt.day,
+    );
+    groups.update(
+      day,
+      (value) => [...value, transaction],
+      ifAbsent: () => [transaction],
+    );
+  }
+  return [
+    for (final entry in groups.entries)
+      (date: entry.key, transactions: entry.value),
+  ]..sort((a, b) => b.date.compareTo(a.date));
+}
+
 String formatBudgetingMoney(
   double amount,
   CurrencyCode currency, {

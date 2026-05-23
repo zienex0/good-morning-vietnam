@@ -7,7 +7,7 @@ enum AmortizationUnit { days, weeks, months }
 /// How a single expense is spread across time so it contributes a per-day slice
 /// to spend trends instead of one large spike on the purchase day.
 @freezed
-class Amortization with _$Amortization {
+abstract class Amortization with _$Amortization {
   const Amortization._();
 
   @Assert('count >= 1', 'amortization count must be at least 1')

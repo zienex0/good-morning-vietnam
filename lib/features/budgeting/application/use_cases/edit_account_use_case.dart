@@ -1,14 +1,11 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'edit_account_use_case.g.dart';
 
 class EditAccountUseCase {
   const EditAccountUseCase(this._repository);
 
-  final BudgetingRepository _repository;
+  final AccountRepository _repository;
 
   Future<Result<Account, Failure>> call({
     required String accountId,
@@ -28,9 +25,4 @@ class EditAccountUseCase {
         return Err(failure);
     }
   }
-}
-
-@Riverpod(keepAlive: true)
-EditAccountUseCase editAccountUseCase(EditAccountUseCaseRef ref) {
-  return EditAccountUseCase(ref.watch(budgetingRepositoryProvider));
 }
