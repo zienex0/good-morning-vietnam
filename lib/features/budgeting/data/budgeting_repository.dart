@@ -34,6 +34,10 @@ abstract interface class BudgetingRepository {
 
   Future<Result<void, Failure>> deleteAccount({required String accountId});
 
+  Future<Result<void, Failure>> deleteAccountWithTransactions({
+    required String accountId,
+  });
+
   Future<Result<List<Transaction>, Failure>> fetchTransactions({
     required String tripId,
   });

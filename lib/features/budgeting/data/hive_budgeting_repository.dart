@@ -142,6 +142,36 @@ class HiveBudgetingRepository implements BudgetingRepository {
   }
 
   @override
+  Future<Result<void, Failure>> deleteAccountWithTransactions({
+    required String accountId,
+  }) async {
+    if (!boxes.accounts.containsKey(accountId)) {
+      return const Err(NotFoundFailure());
+    }
+
+    final transactionIdsToRemove = <dynamic>[];
+    for (final key in boxes.transactions.keys) {
+      final raw = boxes.transactions.get(key);
+      if (raw == null) {
+        continue;
+      }
+      try {
+        final transaction = _decodeTransaction(raw);
+        if (transaction.sourceAccountId == accountId ||
+            transaction.destAccountId == accountId) {
+          transactionIdsToRemove.add(key);
+        }
+      } on Object {
+        transactionIdsToRemove.add(key);
+      }
+    }
+
+    await boxes.transactions.deleteAll(transactionIdsToRemove);
+    await boxes.accounts.delete(accountId);
+    return const Ok(null);
+  }
+
+  @override
   Future<Result<List<Transaction>, Failure>> fetchTransactions({
     required String tripId,
   }) async {

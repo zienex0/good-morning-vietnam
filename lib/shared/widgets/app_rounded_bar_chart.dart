@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_chart_data.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_formatters.dart';
 
 class AppRoundedBarChart extends StatelessWidget {
   const AppRoundedBarChart({required this.values, super.key});
 
-  final List<({String label, double value, String detail, Color color})> values;
+  final List<AppChartDatum> values;
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +22,7 @@ class AppRoundedBarChart extends StatelessWidget {
       (max, item) => math.max(max, item.value),
     );
     final chartMaxY = maxValue == AppSpacing.none ? 1.0 : maxValue * 1.12;
+    final palette = context.colors;
     final tooltipTitleStyle = context.inverseText.labelSmall!;
     final tooltipValueStyle = context.inverseText.labelSmall!;
 
@@ -46,7 +49,7 @@ class AppRoundedBarChart extends StatelessWidget {
                     vertical: AppSpacing.sm,
                   ),
                   tooltipMargin: AppSpacing.md,
-                  getTooltipColor: (_) => AppColors.textPrimary,
+                  getTooltipColor: (_) => palette.inverseSurface,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final item = values[groupIndex];
                     return BarTooltipItem(
@@ -54,7 +57,8 @@ class AppRoundedBarChart extends StatelessWidget {
                       tooltipTitleStyle,
                       children: [
                         TextSpan(
-                          text: '\n${item.detail}',
+                          text:
+                              '\n${item.detail ?? formatChartNumber(item.value)}',
                           style: tooltipValueStyle,
                         ),
                       ],
@@ -112,7 +116,11 @@ class AppRoundedBarChart extends StatelessWidget {
                       BarChartRodData(
                         toY: item.value * progress,
                         width: AppSizes.chartBarWidth,
-                        color: item.color.withValues(alpha: progress),
+                        color:
+                            (item.color ??
+                                    palette.chartPalette[index %
+                                        palette.chartPalette.length])
+                                .withValues(alpha: progress),
                         borderRadius: const BorderRadius.vertical(
                           top: AppRadii.pill,
                         ),

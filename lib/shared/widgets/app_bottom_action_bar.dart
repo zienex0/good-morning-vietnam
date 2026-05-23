@@ -9,9 +9,9 @@ class AppBottomActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.sheet,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: context.colors.sheet,
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       child: SafeArea(
         top: false,

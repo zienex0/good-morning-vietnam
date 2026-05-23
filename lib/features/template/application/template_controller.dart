@@ -54,7 +54,7 @@ class TemplateController extends _$TemplateController {
       return;
     }
 
-    state = const AsyncLoading<TemplateState>().copyWithPrevious(state);
+    state = AsyncLoading<TemplateState>().copyWithPrevious(state);
 
     final confirmReceipt = ref.read(confirmTemplateReceiptUseCaseProvider);
     final result = await confirmReceipt(current.receipt);
@@ -78,7 +78,7 @@ class TemplateController extends _$TemplateController {
     required int seats,
   }) async {
     final previous = state.valueOrNull ?? const TemplateState.initial();
-    state = const AsyncLoading<TemplateState>().copyWithPrevious(state);
+    state = AsyncLoading<TemplateState>().copyWithPrevious(state);
 
     final loadReceipt = ref.read(loadTemplateReceiptUseCaseProvider);
     final result = await loadReceipt(track: track, seats: seats);

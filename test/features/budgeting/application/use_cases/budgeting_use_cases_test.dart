@@ -855,6 +855,22 @@ class FakeBudgetingRepository implements BudgetingRepository {
   }
 
   @override
+  Future<Result<void, Failure>> deleteAccountWithTransactions({
+    required String accountId,
+  }) async {
+    if (!_accounts.containsKey(accountId)) {
+      return const Err(NotFoundFailure());
+    }
+    _transactions.removeWhere(
+      (_, transaction) =>
+          transaction.sourceAccountId == accountId ||
+          transaction.destAccountId == accountId,
+    );
+    _accounts.remove(accountId);
+    return const Ok(null);
+  }
+
+  @override
   Future<Result<Trip, Failure>> fetchTrip({required String tripId}) async {
     final trip = _trips[tripId];
     if (trip == null) return const Err(NotFoundFailure());

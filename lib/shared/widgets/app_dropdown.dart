@@ -40,14 +40,10 @@ class _AppDropdownState<T extends Object> extends State<AppDropdown<T>> {
   Widget build(BuildContext context) {
     final selectedOption = _selectedOption;
     final hasSelection = widget.value != null;
-    final borderColor = hasSelection || _isOpen
-        ? AppColors.borderStrong
-        : AppColors.border;
 
     return _DropdownField(
       isPlaceholder: !hasSelection,
       isOpen: _isOpen,
-      borderColor: borderColor,
       onTap: _openMenu,
       child:
           selectedOption?.selectedChild ??
@@ -93,14 +89,14 @@ class _AppDropdownState<T extends Object> extends State<AppDropdown<T>> {
       initialValue: currentValue == null
           ? _DropdownSelection<T>.none()
           : _DropdownSelection<T>.value(currentValue),
-      color: AppColors.sheet,
-      surfaceTintColor: AppColors.sheet,
+      color: context.colors.sheet,
+      surfaceTintColor: context.colors.sheet,
       elevation: AppSpacing.none,
       menuPadding: EdgeInsets.zero,
       constraints: BoxConstraints.tightFor(width: renderBox.size.width),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(AppRadii.lg),
-        side: BorderSide(color: AppColors.border),
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.all(AppRadii.lg),
+        side: BorderSide(color: context.colors.border),
       ),
       popUpAnimationStyle: const AnimationStyle(
         curve: Easing.emphasizedDecelerate,
@@ -146,14 +142,12 @@ class _DropdownField extends StatelessWidget {
     required this.child,
     required this.isPlaceholder,
     required this.isOpen,
-    required this.borderColor,
     required this.onTap,
   });
 
   final Widget child;
   final bool isPlaceholder;
   final bool isOpen;
-  final Color borderColor;
   final VoidCallback onTap;
 
   @override
@@ -163,15 +157,17 @@ class _DropdownField extends StatelessWidget {
         : context.text.bodyMedium;
 
     return Material(
-      color: AppColors.surfaceRaised,
+      color: context.colors.surfaceRaised,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(AppRadii.pill),
-        side: BorderSide(color: borderColor),
+        borderRadius: const BorderRadius.all(AppRadii.lg),
+        side: isOpen
+            ? BorderSide(color: context.colors.accent, width: 1.5)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,
         customBorder: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(AppRadii.pill),
+          borderRadius: BorderRadius.all(AppRadii.lg),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -222,17 +218,17 @@ class _DropdownMenuRowContent extends StatelessWidget {
     return DefaultTextStyle.merge(
       style: textStyle,
       child: IconTheme.merge(
-        data: const IconThemeData(
-          color: AppColors.textPrimary,
+        data: IconThemeData(
+          color: context.colors.textPrimary,
           size: AppSizes.iconMd,
         ),
         child: Row(
           children: [
             Expanded(child: child),
             if (selected)
-              const Icon(
+              Icon(
                 Icons.check_rounded,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 size: AppSizes.iconMd,
               ),
           ],

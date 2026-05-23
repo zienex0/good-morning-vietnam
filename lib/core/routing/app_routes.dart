@@ -1,16 +1,14 @@
 /// Typed route path constants for the starter app.
 abstract final class AppRoutes {
   static const String home = '/';
-  static const String stats = '/stats';
   static const String accounts = '/accounts';
-  static const String settings = '/settings';
-  static const String topUp = '/top-up';
-  static const String expense = '/expense';
-  static const String transfer = '/transfer';
-  static const String selectCurrency = '/select-currency';
-  static const String selectAccount = '/select-account';
-  static const String selectAmortization = '/select-amortization';
-  static const String onboarding = '/onboarding';
-  static const String newTrip = '/trips/new';
   static const String newAccount = '/accounts/new';
+  static const String accountDetails = '/accounts/detail';
+  static const String gallery = '/gallery';
+  static const String details = '/details';
+
+  static String accountDetailsFor(String id) => '$accountDetails/$id';
+
+  /// Builds the path for the details screen for a given [id].
+  static String detailsFor(String id) => '$details/$id';
 }

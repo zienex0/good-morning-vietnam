@@ -1,11 +1,13 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_chart_data.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_formatters.dart';
 
 class AppDonutChart extends StatefulWidget {
   const AppDonutChart({required this.values, super.key});
 
-  final List<({String label, double value, String detail, Color color})> values;
+  final List<AppChartDatum> values;
 
   @override
   State<AppDonutChart> createState() => _AppDonutChartState();
@@ -16,13 +18,16 @@ class _AppDonutChartState extends State<AppDonutChart> {
 
   @override
   Widget build(BuildContext context) {
-    final chartValues = widget.values
-        .where((item) => item.value > AppSpacing.none)
+    final chartValues = widget.values.indexed
+        .where((entry) => entry.$2.value > AppSpacing.none)
         .toList();
     final touchedItem =
         _touchedIndex == null || _touchedIndex! >= chartValues.length
         ? null
-        : chartValues[_touchedIndex!];
+        : chartValues[_touchedIndex!].$2;
+    final detailText = touchedItem == null
+        ? ''
+        : touchedItem.detail ?? formatChartNumber(touchedItem.value);
 
     return Row(
       children: [
@@ -40,20 +45,25 @@ class _AppDonutChartState extends State<AppDonutChart> {
                       ? [
                           PieChartSectionData(
                             value: 1,
-                            color: AppColors.surfaceRaised,
+                            color: context.colors.surfaceRaised,
                             radius: AppSizes.chartRingStroke * progress,
                             showTitle: false,
                             cornerRadius: AppSpacing.sm,
                           ),
                         ]
                       : [
-                          for (final (index, item) in chartValues.indexed)
+                          for (final (position, (index, item))
+                              in chartValues.indexed)
                             PieChartSectionData(
                               value: item.value,
-                              color: item.color.withValues(alpha: progress),
+                              color: _resolveColor(
+                                index,
+                                item,
+                                context.colors,
+                              ).withValues(alpha: progress),
                               radius:
                                   (AppSizes.chartRingStroke +
-                                      (index == _touchedIndex
+                                      (position == _touchedIndex
                                           ? AppSpacing.xs
                                           : AppSpacing.none)) *
                                   progress,
@@ -69,7 +79,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
                       centerSpaceRadius:
                           (AppSizes.chartRingSize / 2) -
                           AppSizes.chartRingStroke,
-                      centerSpaceColor: AppColors.canvas,
+                      centerSpaceColor: context.colors.canvas,
                       pieTouchData: PieTouchData(
                         touchCallback: (event, response) {
                           final sectionIndex =
@@ -107,10 +117,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              touchedItem?.detail ?? '',
-                              style: context.text.titleMedium,
-                            ),
+                            Text(detailText, style: context.text.titleMedium),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
                               touchedItem?.label ?? '',
@@ -131,9 +138,12 @@ class _AppDonutChartState extends State<AppDonutChart> {
         Expanded(
           child: Column(
             children: [
-              for (final item in widget.values) ...[
-                _LegendRow(item: item),
-                if (item != widget.values.last)
+              for (final (index, item) in widget.values.indexed) ...[
+                _LegendRow(
+                  item: item,
+                  color: _resolveColor(index, item, context.colors),
+                ),
+                if (index != widget.values.length - 1)
                   const SizedBox(height: AppSpacing.md),
               ],
             ],
@@ -144,10 +154,14 @@ class _AppDonutChartState extends State<AppDonutChart> {
   }
 }
 
-class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.item});
+Color _resolveColor(int index, AppChartDatum item, AppPalette palette) =>
+    item.color ?? palette.chartPalette[index % palette.chartPalette.length];
 
-  final ({String label, double value, String detail, Color color}) item;
+class _LegendRow extends StatelessWidget {
+  const _LegendRow({required this.item, required this.color});
+
+  final AppChartDatum item;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +169,7 @@ class _LegendRow extends StatelessWidget {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: item.color,
+            color: color,
             borderRadius: const BorderRadius.all(AppRadii.pill),
           ),
           child: const SizedBox.square(dimension: AppSizes.chartDot * 2),
@@ -170,7 +184,10 @@ class _LegendRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Text(item.detail, style: context.text.labelMedium),
+        Text(
+          item.detail ?? formatChartNumber(item.value),
+          style: context.text.labelMedium,
+        ),
       ],
     );
   }

@@ -9,6 +9,7 @@ class AppStrings {
 
   String get appName => 'Flutter Foundation Kit';
   String get home => 'Home';
+  String get gallery => 'Gallery';
   String get templateTitle => 'Foundation ready';
   String get templateSubtitle => 'Theme, routing, Riverpod, and UI primitives';
   String get templateDescription =>

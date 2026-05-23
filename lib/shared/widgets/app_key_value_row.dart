@@ -5,59 +5,33 @@ class AppKeyValueRow extends StatelessWidget {
   const AppKeyValueRow({
     required this.label,
     required this.value,
-    this.labelStyle,
-    this.valueStyle,
-    this.onTap,
-    this.trailing,
+    this.emphasized = false,
     super.key,
   });
 
   final String label;
   final String value;
-  final TextStyle? labelStyle;
-  final TextStyle? valueStyle;
-  final VoidCallback? onTap;
-  final Widget? trailing;
+
+  /// Renders the row as a summary line (e.g. a total) with stronger type.
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
-    final row = Padding(
+    final labelStyle = emphasized
+        ? context.text.titleMedium
+        : context.mutedText.bodyMedium;
+    final valueStyle = emphasized
+        ? context.titleStrong
+        : context.text.bodyMedium;
+
+    return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: SizedBox(
-        width: double.infinity,
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: labelStyle ?? context.mutedText.bodyMedium,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Flexible(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
-                style: valueStyle ?? context.text.bodyMedium,
-              ),
-            ),
-            if (trailing != null) ...[
-              const SizedBox(width: AppSpacing.xs),
-              trailing!,
-            ],
-          ],
-        ),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: labelStyle)),
+          Text(value, style: valueStyle),
+        ],
       ),
     );
-
-    if (onTap == null) {
-      return row;
-    }
-
-    return GestureDetector(onTap: onTap, child: row);
   }
 }

@@ -9,8 +9,8 @@ class AppBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: context.pop,
-      style: const ButtonStyle(
-        backgroundColor: WidgetStatePropertyAll(AppColors.canvas),
+      style: ButtonStyle(
+        backgroundColor: WidgetStatePropertyAll(context.colors.canvas),
       ),
       icon: const Icon(Icons.arrow_back),
     );

@@ -29,7 +29,7 @@ final templateConfirmedCountProvider = AutoDisposeStreamProvider<int>.internal(
 // ignore: unused_element
 typedef TemplateConfirmedCountRef = AutoDisposeStreamProviderRef<int>;
 String _$templateControllerHash() =>
-    r'adfc0e7689c811a733a9c8edca3db8c0e2c8ecef';
+    r'cf056e457e82b0441dd113ceba5c762ec49f15cc';
 
 /// See also [TemplateController].
 @ProviderFor(TemplateController)

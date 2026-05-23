@@ -12,7 +12,6 @@ class AppSliverPage extends StatelessWidget {
     this.actions = const [],
     this.bottomNavigationBar,
     this.includeScaffold = true,
-    this.leadingWidth,
     super.key,
   }) : assert(
          includeScaffold || bottomNavigationBar == null,
@@ -26,7 +25,6 @@ class AppSliverPage extends StatelessWidget {
   final List<Widget> slivers;
   final Widget? bottomNavigationBar;
   final bool includeScaffold;
-  final double? leadingWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -65,15 +63,15 @@ class AppSliverPage extends StatelessWidget {
           shadowColor: Theme.of(context).dividerColor,
           leading: appBarLeading,
           leadingWidth: leading == null
-              ? leadingWidth
-              : leadingWidth ?? AppSpacing.page + AppSizes.controlMd,
+              ? null
+              : AppSpacing.page + AppSizes.controlMd,
           actions: appBarActions,
           expandedHeight: _sliverAppBarExpandedHeight,
 
-          backgroundColor: AppColors.surface,
+          backgroundColor: context.colors.surface,
           surfaceTintColor: Colors.transparent,
 
-          foregroundColor: AppColors.textPrimary,
+          foregroundColor: context.colors.textPrimary,
           centerTitle: false,
           flexibleSpace: FlexibleSpaceBar(
             centerTitle: false,
@@ -87,7 +85,7 @@ class AppSliverPage extends StatelessWidget {
             title: hasTitle
                 ? _SliverTitle(title: title, subtitle: subtitle)
                 : null,
-            background: const ColoredBox(color: AppColors.canvas),
+            background: ColoredBox(color: context.colors.canvas),
           ),
         ),
         ...slivers,

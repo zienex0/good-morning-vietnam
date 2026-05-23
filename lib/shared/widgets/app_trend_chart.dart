@@ -3,18 +3,19 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_chart_data.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_formatters.dart';
 
 class AppTrendChart extends StatelessWidget {
   const AppTrendChart({
     required this.points,
-    this.color = AppColors.accent,
+    this.color,
     this.showCumulativeValue = false,
     super.key,
   });
 
-  final List<({DateTime date, double value})> points;
-  final Color color;
+  final List<AppTrendPoint> points;
+  final Color? color;
   final bool showCumulativeValue;
 
   @override
@@ -32,6 +33,8 @@ class AppTrendChart extends StatelessWidget {
     final bounds = _ChartBounds.from(values);
     final labelIndexes = _labelIndexes(chartPoints.length);
     final baseline = bounds.minY;
+    final palette = context.colors;
+    final lineColor = color ?? palette.accent;
     final tooltipTitleStyle = context.inverseText.labelSmall!;
     final tooltipValueStyle = context.inverseText.labelSmall!;
 
@@ -62,7 +65,7 @@ class AppTrendChart extends StatelessWidget {
                   fitInsideHorizontally: true,
                   fitInsideVertically: true,
                   tooltipBorderRadius: const BorderRadius.all(AppRadii.md),
-                  getTooltipColor: (_) => AppColors.textPrimary,
+                  getTooltipColor: (_) => palette.inverseSurface,
                   getTooltipItems: (spots) => [
                     for (final spot in spots)
                       LineTooltipItem(
@@ -83,10 +86,10 @@ class AppTrendChart extends StatelessWidget {
               gridData: FlGridData(
                 drawVerticalLine: false,
                 horizontalInterval: bounds.interval,
-                getDrawingHorizontalLine: (value) => const FlLine(
-                  color: AppColors.border,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: palette.border,
                   strokeWidth: AppSizes.chartHairline,
-                  dashArray: [4, 4],
+                  dashArray: const [4, 4],
                 ),
               ),
               titlesData: FlTitlesData(
@@ -129,7 +132,7 @@ class AppTrendChart extends StatelessWidget {
                 LineChartBarData(
                   spots: spots,
                   isCurved: true,
-                  color: color.withValues(alpha: progress),
+                  color: lineColor.withValues(alpha: progress),
                   barWidth: AppSizes.chartStroke,
                   isStrokeCapRound: true,
                   isStrokeJoinRound: true,
@@ -139,16 +142,16 @@ class AppTrendChart extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        color.withValues(alpha: 0.2 * progress),
-                        color.withValues(alpha: AppSpacing.none),
+                        lineColor.withValues(alpha: 0.2 * progress),
+                        lineColor.withValues(alpha: AppSpacing.none),
                       ],
                     ),
                   ),
                   dotData: FlDotData(
                     getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                       radius: AppSizes.chartDot * progress,
-                      color: AppColors.surface,
-                      strokeColor: color.withValues(alpha: progress),
+                      color: palette.surface,
+                      strokeColor: lineColor.withValues(alpha: progress),
                       strokeWidth: AppSizes.chartHairline,
                     ),
                   ),
@@ -162,7 +165,7 @@ class AppTrendChart extends StatelessWidget {
     );
   }
 
-  List<({DateTime date, double value})> get _chartPoints {
+  List<AppTrendPoint> get _chartPoints {
     final sortedPoints = [...points]..sort((a, b) => a.date.compareTo(b.date));
 
     if (!showCumulativeValue) {
@@ -172,7 +175,7 @@ class AppTrendChart extends StatelessWidget {
     var total = 0.0;
     return [
       for (final point in sortedPoints)
-        (date: point.date, value: total += point.value),
+        AppTrendPoint(date: point.date, value: total += point.value),
     ];
   }
 

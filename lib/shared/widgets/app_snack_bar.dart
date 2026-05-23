@@ -28,11 +28,11 @@ abstract final class AppSnackBars {
       ..showSnackBar(
         SnackBar(
           duration: autoDismiss ? duration : const Duration(days: 1),
-          backgroundColor: AppColors.textPrimary,
+          backgroundColor: context.colors.inverseSurface,
           showCloseIcon: true,
           content: Row(
             children: [
-              Icon(_icon(variant), color: _accentColor(variant)),
+              Icon(_icon(variant), color: _accentColor(context, variant)),
               const SizedBox(width: AppSpacing.sm),
               Expanded(child: Text(message)),
             ],
@@ -47,11 +47,12 @@ abstract final class AppSnackBars {
       );
   }
 
-  static Color _accentColor(AppSnackBarVariant variant) => switch (variant) {
-    AppSnackBarVariant.info => AppColors.info,
-    AppSnackBarVariant.success => AppColors.success,
-    AppSnackBarVariant.error => AppColors.error,
-  };
+  static Color _accentColor(BuildContext context, AppSnackBarVariant variant) =>
+      switch (variant) {
+        AppSnackBarVariant.info => context.colors.info,
+        AppSnackBarVariant.success => context.colors.success,
+        AppSnackBarVariant.error => context.colors.error,
+      };
 
   static IconData _icon(AppSnackBarVariant variant) => switch (variant) {
     AppSnackBarVariant.info => Icons.info_outline_rounded,

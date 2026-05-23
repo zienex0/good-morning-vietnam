@@ -10,19 +10,16 @@ class AppShell extends StatelessWidget {
     required this.navigationShell,
     required this.destinations,
     this.includeNavigationBar = true,
-    this.drawer,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<AppShellDestination> destinations;
   final bool includeNavigationBar;
-  final Widget? drawer;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: drawer,
       body: navigationShell,
       bottomNavigationBar: includeNavigationBar
           ? _AppNavigationBar(
@@ -59,13 +56,13 @@ class _AppNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.sheet,
-        border: const Border(top: BorderSide(color: AppColors.border)),
-        boxShadow: [
+        color: context.colors.sheet,
+        border: Border(top: BorderSide(color: context.colors.border)),
+        boxShadow: const [
           BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.05),
+            color: Color(0x0D000000),
             blurRadius: AppSpacing.xl,
-            offset: const Offset(AppSpacing.none, -AppSpacing.xs),
+            offset: Offset(AppSpacing.none, -AppSpacing.xs),
           ),
         ],
       ),
@@ -94,7 +91,9 @@ class _AppNavigationBar extends StatelessWidget {
                       icon: Icon(
                         selected ? destination.selectedIcon : destination.icon,
                       ),
-                      color: selected ? AppColors.accent : AppColors.textMuted,
+                      color: selected
+                          ? context.colors.accent
+                          : context.colors.textMuted,
                       iconSize: _bottomNavIconSize,
                     ),
                   );
