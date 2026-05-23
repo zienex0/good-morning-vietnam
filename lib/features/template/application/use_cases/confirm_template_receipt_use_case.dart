@@ -1,9 +1,6 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/template/data/template_repository.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_receipt.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'confirm_template_receipt_use_case.g.dart';
 
 /// Confirms a receipt, committing the current seat and track selection.
 ///
@@ -24,11 +21,4 @@ class ConfirmTemplateReceiptUseCase {
     }
     return _repository.confirmReceipt(receipt);
   }
-}
-
-@Riverpod(keepAlive: true)
-ConfirmTemplateReceiptUseCase confirmTemplateReceiptUseCase(
-  ConfirmTemplateReceiptUseCaseRef ref,
-) {
-  return ConfirmTemplateReceiptUseCase(ref.watch(templateRepositoryProvider));
 }

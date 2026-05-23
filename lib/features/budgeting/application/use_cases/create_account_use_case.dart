@@ -1,20 +1,21 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/account.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'create_account_use_case.g.dart';
 
 class CreateAccountUseCase {
   const CreateAccountUseCase({
-    required BudgetingRepository repository,
+    required AccountRepository accountRepository,
+    required TripRepository tripRepository,
     required BudgetingIdGenerator idGenerator,
-  }) : _repository = repository,
+  }) : _accountRepository = accountRepository,
+       _tripRepository = tripRepository,
        _idGenerator = idGenerator;
 
-  final BudgetingRepository _repository;
+  final AccountRepository _accountRepository;
+  final TripRepository _tripRepository;
   final BudgetingIdGenerator _idGenerator;
 
   Future<Result<Account, Failure>> call({
@@ -34,7 +35,7 @@ class CreateAccountUseCase {
       return Err(validationFailure);
     }
 
-    final tripResult = await _repository.fetchTrip(tripId: tripId);
+    final tripResult = await _tripRepository.fetchTrip(tripId: tripId);
     switch (tripResult) {
       case Ok():
         break;
@@ -51,7 +52,7 @@ class CreateAccountUseCase {
       openingBalance: openingBalance,
       icon: icon,
     );
-    return _repository.createAccount(account);
+    return _accountRepository.createAccount(account);
   }
 
   ValidationFailure? _validate({
@@ -70,12 +71,4 @@ class CreateAccountUseCase {
     }
     return null;
   }
-}
-
-@Riverpod(keepAlive: true)
-CreateAccountUseCase createAccountUseCase(CreateAccountUseCaseRef ref) {
-  return CreateAccountUseCase(
-    repository: ref.watch(budgetingRepositoryProvider),
-    idGenerator: ref.watch(budgetingIdGeneratorProvider),
-  );
 }

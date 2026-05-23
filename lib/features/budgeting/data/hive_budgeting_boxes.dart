@@ -1,7 +1,4 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'hive_budgeting_boxes.g.dart';
 
 const String _tripsBoxName = 'budgeting.trips';
 const String _accountsBoxName = 'budgeting.accounts';
@@ -34,13 +31,5 @@ Future<HiveBudgetingBoxes> openHiveBudgetingBoxes() async {
     accounts: accounts,
     transactions: transactions,
     settings: settings,
-  );
-}
-
-@Riverpod(keepAlive: true)
-HiveBudgetingBoxes hiveBudgetingBoxes(HiveBudgetingBoxesRef ref) {
-  throw StateError(
-    'hiveBudgetingBoxesProvider must be overridden in main() with '
-    'an instance produced by openHiveBudgetingBoxes().',
   );
 }

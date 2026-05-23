@@ -7,6 +7,7 @@ import 'package:flutter_foundation_kit/core/logging/logger.dart';
 import 'package:flutter_foundation_kit/core/routing/app_router.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/core/theme/theme_mode_controller.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/hive_budgeting_boxes.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,7 +50,7 @@ class MainApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.read(appRouterProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode = ref.watch(themeModeControllerProvider);
 
     return MaterialApp.router(
       title: context.l10n.appName,

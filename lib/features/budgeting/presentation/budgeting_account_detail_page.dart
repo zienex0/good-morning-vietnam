@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_account_controller.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_accounts_summary.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_formatters.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_home_formatters.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
@@ -18,40 +17,39 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncSummary = ref.watch(
-      budgetingAccountDetailSummaryProvider(accountId),
-    );
+    final asyncView = ref.watch(budgetingAccountDetailViewProvider(accountId));
 
     return AppAsyncValueView(
-      value: asyncSummary,
+      value: asyncView,
       onRetry: () =>
-          ref.invalidate(budgetingAccountDetailSummaryProvider(accountId)),
-      data: (summary) {
-        final trip = summary.trip;
-        final account = summary.account;
+          ref.invalidate(budgetingAccountDetailViewProvider(accountId)),
+      data: (view) {
+        final transactionGroups = view == null
+            ? const <BudgetingTransactionDayGroup>[]
+            : groupBudgetingTransactionsByDay(view.transactions);
 
         return AppSliverPage(
-          title: account?.account.name ?? 'Account',
-          subtitle: account == null
+          title: view?.account.account.name ?? 'Account',
+          subtitle: view == null
               ? 'Not found'
-              : formatBudgetingAccountCurrency(account.account.currency),
+              : formatBudgetingAccountCurrency(view.account.account.currency),
           leading: const AppBackButton(),
           actions: [
             IconButton(
               tooltip: 'More',
-              onPressed: account == null
+              onPressed: view == null
                   ? null
                   : () {
                       unawaited(
                         AppActionSheet.show(
                           context,
-                          title: account.account.name,
+                          title: view.account.account.name,
                           actions: [
                             AppAction(
                               label: 'Edit name',
                               icon: Icons.edit_outlined,
                               onPressed: () async {
-                                String currentName = account.account.name;
+                                String currentName = view.account.account.name;
                                 final messenger = ScaffoldMessenger.of(context);
 
                                 final edited = await AppBottomSheet.show<bool>(
@@ -92,12 +90,14 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                                 );
                                                 final saved = await ref
                                                     .read(
-                                                      budgetingAccountControllerProvider
+                                                      budgetingAccountProvider
                                                           .notifier,
                                                     )
                                                     .editAccount(
-                                                      accountId:
-                                                          account.account.id,
+                                                      accountId: view
+                                                          .account
+                                                          .account
+                                                          .id,
                                                       name: currentName,
                                                     );
                                                 if (saved) {
@@ -141,12 +141,9 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                 }
 
                                 final deleted = await ref
-                                    .read(
-                                      budgetingAccountControllerProvider
-                                          .notifier,
-                                    )
+                                    .read(budgetingAccountProvider.notifier)
                                     .deleteAccountWithTransactions(
-                                      accountId: account.account.id,
+                                      accountId: view.account.account.id,
                                     );
                                 if (deleted) {
                                   router.go(AppRoutes.accounts);
@@ -170,7 +167,7 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
               ),
               sliver: SliverList.list(
                 children: [
-                  if (trip == null || account == null)
+                  if (view == null)
                     AppCard(
                       child: Text(
                         'This account could not be found.',
@@ -183,27 +180,27 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                         children: [
                           AppKeyValueRow(
                             label: 'Account',
-                            value: account.account.name,
+                            value: view.account.account.name,
                           ),
                           AppKeyValueRow(
                             label: 'Currency',
                             value: formatBudgetingAccountCurrency(
-                              account.account.currency,
+                              view.account.account.currency,
                             ),
                           ),
                           AppKeyValueRow(
                             label: 'Balance',
                             value: formatBudgetingAccountLocalBalance(
-                              amount: account.localBalance,
-                              currency: account.account.currency,
+                              amount: view.account.localBalance,
+                              currency: view.account.account.currency,
                             ),
                             emphasized: true,
                           ),
                           AppKeyValueRow(
-                            label: trip.homeCurrency,
+                            label: view.trip.homeCurrency,
                             value: formatBudgetingAccountHomeBalance(
-                              amount: account.homeBalance,
-                              homeCurrency: trip.homeCurrency,
+                              amount: view.account.homeBalance,
+                              homeCurrency: view.trip.homeCurrency,
                             ),
                           ),
                         ],
@@ -212,7 +209,7 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.pageBetweenSectionGap),
                     const AppSectionHeader(title: 'Transactions'),
                     const SizedBox(height: AppSpacing.pageWithinSectionGap),
-                    if (summary.transactionGroups.isEmpty)
+                    if (transactionGroups.isEmpty)
                       AppCard(
                         child: Text(
                           'No transactions for this account yet.',
@@ -220,7 +217,7 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                         ),
                       )
                     else
-                      for (final group in summary.transactionGroups) ...[
+                      for (final group in transactionGroups) ...[
                         AppListSection(
                           header: formatFullDate(group.date),
                           children: [
@@ -231,7 +228,10 @@ class BudgetingAccountDetailPage extends ConsumerWidget {
                                 ),
                                 subtitle: formatBudgetingTransactionSubtitle(
                                   transaction,
-                                  {account.account.id: account.account},
+                                  {
+                                    view.account.account.id:
+                                        view.account.account,
+                                  },
                                 ),
                                 trailing: SizedBox(
                                   width: 112,

@@ -7,7 +7,7 @@ typedef CurrencyCode = String;
 enum TripStatus { planning, active, ended }
 
 @freezed
-class Trip with _$Trip {
+abstract class Trip with _$Trip {
   Trip._();
 
   @Assert(
@@ -30,4 +30,14 @@ class Trip with _$Trip {
   }) = _Trip;
 
   bool get isOpenEnded => endDate == null;
+
+  /// 1-based day index of the trip at [asOf]; 0 before the trip starts.
+  int dayOfTrip(DateTime asOf) {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final today = DateTime(asOf.year, asOf.month, asOf.day);
+    if (today.isBefore(start)) {
+      return 0;
+    }
+    return today.difference(start).inDays + 1;
+  }
 }

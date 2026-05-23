@@ -1,19 +1,16 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_id_generator.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'create_trip_use_case.g.dart';
 
 class CreateTripUseCase {
   const CreateTripUseCase({
-    required BudgetingRepository repository,
+    required TripRepository repository,
     required BudgetingIdGenerator idGenerator,
   }) : _repository = repository,
        _idGenerator = idGenerator;
 
-  final BudgetingRepository _repository;
+  final TripRepository _repository;
   final BudgetingIdGenerator _idGenerator;
 
   Future<Result<Trip, Failure>> call({
@@ -72,12 +69,4 @@ ValidationFailure? validateTripFields({
     return const ValidationFailure('Trip budget cannot be negative.');
   }
   return null;
-}
-
-@Riverpod(keepAlive: true)
-CreateTripUseCase createTripUseCase(CreateTripUseCaseRef ref) {
-  return CreateTripUseCase(
-    repository: ref.watch(budgetingRepositoryProvider),
-    idGenerator: ref.watch(budgetingIdGeneratorProvider),
-  );
 }

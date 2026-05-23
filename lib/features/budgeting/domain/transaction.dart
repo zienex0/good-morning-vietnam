@@ -7,7 +7,7 @@ part 'transaction.freezed.dart';
 enum TransactionType { expense, income, transfer }
 
 @freezed
-class Transaction with _$Transaction {
+abstract class Transaction with _$Transaction {
   Transaction._();
 
   @Assert('paidAmount > 0', 'paidAmount must be positive')

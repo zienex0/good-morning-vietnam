@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_accounts_summary.dart';
+import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_providers.dart';
 import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_formatters.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,19 +12,17 @@ class BudgetingAccountsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncSummary = ref.watch(budgetingAccountsSummaryProvider);
+    final asyncView = ref.watch(budgetingAccountsViewProvider);
 
     return AppAsyncValueView(
-      value: asyncSummary,
-      onRetry: () => ref.invalidate(budgetingAccountsSummaryProvider),
-      data: (summary) {
-        final trip = summary.trip;
-
+      value: asyncView,
+      onRetry: () => ref.invalidate(budgetingAccountsViewProvider),
+      data: (view) {
         return AppSliverPage(
           title: 'Accounts',
-          subtitle: trip == null
+          subtitle: view == null
               ? 'No active trip yet'
-              : 'Sorted by ${trip.homeCurrency} balance',
+              : 'Sorted by ${view.trip.homeCurrency} balance',
           actions: [
             TextButton(
               onPressed: () => context.push(AppRoutes.newAccount),
@@ -41,14 +39,14 @@ class BudgetingAccountsPage extends ConsumerWidget {
               ),
               sliver: SliverList.list(
                 children: [
-                  if (trip == null)
+                  if (view == null)
                     AppCard(
                       child: Text(
                         'Create or select a trip before adding accounts.',
                         style: context.mutedText.bodyMedium,
                       ),
                     )
-                  else if (summary.accounts.isEmpty)
+                  else if (view.accounts.isEmpty)
                     AppCard(
                       child: Text(
                         'No accounts yet.',
@@ -58,12 +56,12 @@ class BudgetingAccountsPage extends ConsumerWidget {
                   else
                     AppListSection(
                       children: [
-                        for (final account in summary.accounts)
+                        for (final account in view.accounts)
                           AppTile(
                             title: account.account.name,
                             subtitle:
                                 '${formatBudgetingAccountCurrency(account.account.currency)} · '
-                                '${formatBudgetingAccountHomeBalance(amount: account.homeBalance, homeCurrency: trip.homeCurrency)}',
+                                '${formatBudgetingAccountHomeBalance(amount: account.homeBalance, homeCurrency: view.trip.homeCurrency)}',
                             trailing: SizedBox(
                               width: 104,
                               child: Text(

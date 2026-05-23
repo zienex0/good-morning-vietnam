@@ -1,24 +1,25 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/budgeting_repository.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/account_repository.dart';
+import 'package:flutter_foundation_kit/features/budgeting/data/transaction_repository.dart';
 
-part 'delete_account_with_transactions_use_case.g.dart';
-
+/// Deletes an account and every transaction that touches it, coordinating the
+/// account and transaction repositories.
 class DeleteAccountWithTransactionsUseCase {
-  const DeleteAccountWithTransactionsUseCase(this._repository);
+  const DeleteAccountWithTransactionsUseCase({
+    required AccountRepository accountRepository,
+    required TransactionRepository transactionRepository,
+  }) : _accountRepository = accountRepository,
+       _transactionRepository = transactionRepository;
 
-  final BudgetingRepository _repository;
+  final AccountRepository _accountRepository;
+  final TransactionRepository _transactionRepository;
 
-  Future<Result<void, Failure>> call({required String accountId}) {
-    return _repository.deleteAccountWithTransactions(accountId: accountId);
+  Future<Result<void, Failure>> call({required String accountId}) async {
+    final transactionsResult = await _transactionRepository
+        .deleteTransactionsForAccount(accountId: accountId);
+    if (transactionsResult case Err(failure: final failure)) {
+      return Err(failure);
+    }
+    return _accountRepository.deleteAccount(accountId: accountId);
   }
-}
-
-@Riverpod(keepAlive: true)
-DeleteAccountWithTransactionsUseCase deleteAccountWithTransactionsUseCase(
-  DeleteAccountWithTransactionsUseCaseRef ref,
-) {
-  return DeleteAccountWithTransactionsUseCase(
-    ref.watch(budgetingRepositoryProvider),
-  );
 }

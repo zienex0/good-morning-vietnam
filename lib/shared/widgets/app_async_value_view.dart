@@ -23,7 +23,7 @@ class AppAsyncValueView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final previousValue = value.valueOrNull;
+    final previousValue = value.value;
 
     if (preservePreviousData && previousValue != null) {
       return Stack(

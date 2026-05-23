@@ -37,17 +37,22 @@ Use this before opening or approving a PR.
 
 ## State And Data
 
-- Business state lives in controllers/notifiers/services, not widgets.
-- Controllers expose intent-level methods.
-- Controllers depend on use cases for business operations, not directly on
-  repositories when a feature has a data boundary.
-- Use cases live under `application/use_cases/`, receive repositories, and keep
-  operation names readable.
-- Repositories/services normalize low-level failures and return
-  `Result<T, Failure>`.
-- Controllers unwrap `Result<T, Failure>` into `AsyncValue<T>` before the UI
-  renders it.
-- Derived values are getters or pure functions near the owning model/state.
+- Every provider for a feature lives in `application/<feature>_providers.dart`.
+  No providers in `data/` or `domain/`.
+- Business state lives in providers/notifiers, not widgets.
+- Notifiers (one per aggregate) expose intent-level methods for writes.
+- Reads come from data providers over repository `watch*` streams; there is no
+  manual invalidation after a write.
+- Use cases live under `application/use_cases/` as plain classes for real logic
+  (validation / orchestration / calculation). None of them has its own provider,
+  and none is a one-line forward of a single repository call.
+- A screen's combined data is a plain record from a view provider, not a summary
+  aggregation class.
+- Repositories normalize low-level failures and return `Result<T, Failure>`.
+- Notifiers/view providers unwrap `Result<T, Failure>` into `AsyncValue<T>`
+  before the UI renders it.
+- Derived values are methods on the domain model, or use cases when they span
+  entities or need a repository.
 - UI displays localized, user-facing messages.
 
 ## Routing, Logging, And Side Effects

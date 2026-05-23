@@ -17,4 +17,4 @@ abstract class Logger {
 }
 
 @Riverpod(keepAlive: true)
-Logger logger(LoggerRef ref) => const DebugLogger();
+Logger logger(Ref ref) => const DebugLogger();

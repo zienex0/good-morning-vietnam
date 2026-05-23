@@ -4,9 +4,6 @@ import 'dart:io';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/exchange_rate.dart';
 import 'package:flutter_foundation_kit/features/budgeting/domain/trip.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'exchange_rate_repository.g.dart';
 
 abstract interface class ExchangeRateRepository {
   Future<Result<ExchangeRate, Failure>> fetchRate({
@@ -79,9 +76,4 @@ String _formatApiDate(DateTime date) {
   final month = date.month.toString().padLeft(2, '0');
   final day = date.day.toString().padLeft(2, '0');
   return '$year-$month-$day';
-}
-
-@Riverpod(keepAlive: true)
-ExchangeRateRepository exchangeRateRepository(ExchangeRateRepositoryRef ref) {
-  return const FrankfurterExchangeRateRepository();
 }

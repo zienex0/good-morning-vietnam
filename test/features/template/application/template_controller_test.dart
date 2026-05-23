@@ -1,4 +1,4 @@
-import 'package:flutter_foundation_kit/features/template/application/template_controller.dart';
+import 'package:flutter_foundation_kit/features/template/application/template_providers.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_track.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -17,26 +17,27 @@ lib/features/feature_name/
 
 Use package imports. Keep names boring and searchable:
 
-- `feature_name_repository.dart`
-- `load_feature_name_use_case.dart`
-- `submit_feature_name_use_case.dart`
-- `feature_name_controller.dart`
-- `feature_name_state.dart`
+- `feature_name_repository.dart` (one per aggregate when the feature grows)
+- `feature_name_providers.dart` (the single home for the feature's providers)
+- `create_feature_name_use_case.dart` / `calculate_feature_name_use_case.dart`
 - `feature_name_formatters.dart`
 - `feature_name_mappers.dart`
 - `feature_name_page.dart`
 
 ## 2. Put Responsibilities In The Right Place
 
-- Put business concepts, enums, and derived values in `domain/`.
+- Put business concepts, enums, and derived values in `domain/`. No providers.
 - Put repository contracts, fake implementations, DTO mapping, SDK calls, API
-  calls, parsing, cache access, and local persistence in `data/`.
-- Put Riverpod controllers/state and intent methods in `application/`.
-- Put feature-specific use cases in `application/use_cases/`; use cases receive
-  repositories and expose action names such as `load`, `submit`, `confirm`, or
-  `sync`. Controllers never import repositories directly — always go through a
-  use case. Business validation (preconditions, cross-field rules) belongs in
-  the use case, not the controller or the repository.
+  calls, parsing, cache access, and local persistence in `data/`. Repositories
+  expose reactive `watch*` streams plus CRUD. No providers in `data/`.
+- Put every provider for the feature in `application/<feature>_providers.dart`:
+  the DI (repository) providers, the reactive data providers, the per-screen
+  view providers, and the notifiers (one per aggregate) that own writes.
+- Put feature-specific use cases in `application/use_cases/` as plain classes —
+  validation, cross-repository orchestration, or derived calculations only.
+  Never give a use case its own provider, and never write a use case that only
+  forwards one repository call. Reads with no logic come straight from a data
+  provider over the repository stream.
 - Put pages, formatter functions, mapper functions, and feature-only widgets in
   `presentation/`.
 - Move a widget to `shared/widgets/` only after a second feature needs it.
@@ -44,13 +45,18 @@ Use package imports. Keep names boring and searchable:
 
 ## 3. Keep Data Flow Explicit
 
-- Repositories return `Result<T, Failure>`.
-- Use cases call repositories and keep operation names readable.
-- Controllers unwrap `Result<T, Failure>` into `AsyncValue<T>`.
-- Pages render `AsyncValue<T>` through `AsyncValueView<T>` when the whole screen
-  depends on async state.
-- Widgets send intent methods to controllers. They do not call repositories,
-  use cases, APIs, databases, SDKs, or platform services directly.
+- Repositories return `Result<T, Failure>` and expose `watch*` streams.
+- Data providers return repository streams; reads need no use case.
+- Use cases (plain classes) hold validation / orchestration / calculation and
+  return `Result<T, Failure>`.
+- A view provider assembles a screen's data into a plain record (no summary
+  class), throwing failures so the page can render `AsyncValue<T>`.
+- Notifiers unwrap `Result<T, Failure>` into `AsyncValue<T>` for their own
+  loading/error; writes re-emit through the streams, so no manual invalidation.
+- Pages render `AsyncValue<T>` through `AppAsyncValueView<T>` when the whole
+  screen depends on async state.
+- Widgets watch providers and send intent to notifiers. They do not call
+  repositories, APIs, databases, SDKs, or platform services directly.
 
 ## 4. Wire Routing
 
