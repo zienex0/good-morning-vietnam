@@ -1,3 +1,4 @@
+import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 
 String formatBudgetingDaysLeft(int? daysLeft) {
@@ -29,4 +30,12 @@ String formatBudgetingCurrentDay(int currentDay) {
 
 String formatBudgetingCategoryShare(double share) {
   return formatPercent(share);
+}
+
+String formatBudgetingTripStatus(TripStatus status) {
+  return switch (status) {
+    TripStatus.planning => 'Planning',
+    TripStatus.active => 'Active',
+    TripStatus.ended => 'Ended',
+  };
 }

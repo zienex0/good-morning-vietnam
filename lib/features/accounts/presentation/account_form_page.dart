@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_account_form_provider.dart';
-import 'package:flutter_foundation_kit/features/accounts/presentation/account_formatters.dart';
+import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_details_step_page.dart';
+import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_name_step_page.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/domain/currencies.dart';
+import 'package:flutter_foundation_kit/shared/widgets/app_step_page_view.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,9 +17,12 @@ class AccountFormPage extends ConsumerStatefulWidget {
 }
 
 class AccountFormPageState extends ConsumerState<AccountFormPage> {
+  final stepPageKey = GlobalKey<AppStepPageViewState>();
   final nameController = TextEditingController();
   final balanceController = TextEditingController();
+  bool initializedCurrency = false;
   String selectedCurrency = 'USD';
+  int currentPage = 0;
 
   @override
   void dispose() {
@@ -37,104 +41,116 @@ class AccountFormPageState extends ConsumerState<AccountFormPage> {
       value: tripAsync,
       onRetry: () => ref.invalidate(activeTripProvider),
       data: (trip) {
-        return AppSliverPage(
-          title: 'Add account',
-          subtitle: trip?.name ?? 'No active trip',
-          leading: const AppBackButton(),
-          bottomNavigationBar: AppBottomActionBar(
-            child: AppButton.primary(
-              label: 'Add',
-              expanded: true,
-              loading: isBusy,
-              onPressed: trip == null
-                  ? null
-                  : () async {
-                      final openingBalance = parseBudgetingAmountInput(
-                        balanceController.text,
-                      );
-                      if (openingBalance == null) {
-                        AppSnackBars.error(context, 'Enter a valid balance.');
-                        return;
-                      }
+        if (!initializedCurrency && trip != null) {
+          initializedCurrency = true;
+          selectedCurrency = trip.homeCurrency;
+        }
 
-                      final account = await ref
-                          .read(accountFormProvider.notifier)
-                          .createAccount(
-                            tripId: trip.id,
-                            name: nameController.text,
-                            currency: selectedCurrency,
-                            openingBalance: openingBalance,
-                          );
-                      if (account != null && context.mounted) {
-                        context.pop();
-                      }
-                    },
+        return AppStepPageView(
+          key: stepPageKey,
+          initialPage: currentPage,
+          leading: const AppBackButton(),
+          physics: const NeverScrollableScrollPhysics(),
+          onPageChanged: (value) => setState(() => currentPage = value),
+          titles: const [Text('Account name'), Text('Account details')],
+          bottomNavigationBar: AppBottomActionBar(
+            child: Row(
+              children: [
+                AppButton.text(
+                  label: 'Back',
+                  onPressed: isBusy ? null : handleBackPressed,
+                ),
+                const Spacer(),
+                AppButton.primary(
+                  label: currentPage == 0 ? 'Next' : 'Add account',
+                  loading: isBusy,
+                  onPressed: trip == null
+                      ? null
+                      : () => handlePrimaryPressed(trip.id),
+                ),
+              ],
             ),
           ),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.page,
-                AppSpacing.pageWithinSectionGap,
-                AppSpacing.page,
-                AppSpacing.pageBetweenSectionGap,
+          pagesSlivers: [
+            [
+              AccountNameStepPage(
+                nameController: nameController,
+                autofocus: true,
               ),
-              sliver: SliverList.list(
-                children: [
-                  TextField(
-                    controller: nameController,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    style: context.text.displaySmall,
-                    decoration: const InputDecoration(
-                      hintText: 'Account name',
-                      border: InputBorder.none,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.pageWithinSectionGap),
-                  const AppSectionHeader(title: 'Currency'),
-                  const SizedBox(height: AppSpacing.md),
-                  AppDropdown<String>(
-                    value: selectedCurrency,
-                    showNoneOption: false,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedCurrency = value);
-                      }
-                    },
-                    options: [
-                      for (final option in kBudgetingCurrencyCatalog)
-                        AppDropdownOption(
-                          value: option.code,
-                          child: Text(
-                            formatBudgetingCurrencyOptionDetail(option),
-                          ),
-                          selectedChild: Text(
-                            formatBudgetingCurrencyOption(option),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.pageWithinSectionGap),
-                  const AppSectionHeader(title: 'Starting balance'),
-                  const SizedBox(height: AppSpacing.md),
-                  TextField(
-                    controller: balanceController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    style: context.text.headlineMedium,
-                    decoration: InputDecoration(
-                      hintText: '0',
-                      suffixText: selectedCurrency,
-                    ),
-                  ),
-                ],
+            ],
+            [
+              AccountDetailsStepPage(
+                selectedCurrency: selectedCurrency,
+                balanceController: balanceController,
+                onCurrencyChanged: (value) {
+                  setState(() => selectedCurrency = value);
+                },
               ),
-            ),
+            ],
           ],
         );
       },
     );
+  }
+
+  Future<void> handlePrimaryPressed(String tripId) async {
+    if (!validateCurrentPage()) {
+      return;
+    }
+
+    if (currentPage == 0) {
+      await stepPageKey.currentState?.incrementPageIndex();
+      return;
+    }
+
+    await saveAccount(tripId);
+  }
+
+  Future<void> handleBackPressed() async {
+    if (currentPage == 0) {
+      context.pop();
+      return;
+    }
+    await stepPageKey.currentState?.decrementPageIndex();
+  }
+
+  bool validateCurrentPage() {
+    if (currentPage == 0 && nameController.text.trim().isEmpty) {
+      AppSnackBars.error(context, 'Account name is required.');
+      return false;
+    }
+
+    if (currentPage == 1 &&
+        parseBudgetingAmountInput(balanceController.text) == null) {
+      AppSnackBars.error(context, 'Enter a valid balance.');
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> saveAccount(String tripId) async {
+    final openingBalance = parseBudgetingAmountInput(balanceController.text);
+    if (openingBalance == null) {
+      AppSnackBars.error(context, 'Enter a valid balance.');
+      return;
+    }
+
+    final account = await ref
+        .read(accountFormProvider.notifier)
+        .createAccount(
+          tripId: tripId,
+          name: nameController.text,
+          currency: selectedCurrency,
+          openingBalance: openingBalance,
+        );
+    if (!mounted) {
+      return;
+    }
+    if (account != null) {
+      context.pop();
+    } else {
+      AppSnackBars.error(context, 'Could not create the account.');
+    }
   }
 }

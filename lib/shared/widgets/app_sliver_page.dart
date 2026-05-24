@@ -94,10 +94,18 @@ class AppSliverPage extends StatelessWidget {
     );
 
     if (!includeScaffold) {
-      return content;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: content,
+      );
     }
 
-    return Scaffold(bottomNavigationBar: bottomNavigationBar, body: content);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(bottomNavigationBar: bottomNavigationBar, body: content),
+    );
   }
 }
 

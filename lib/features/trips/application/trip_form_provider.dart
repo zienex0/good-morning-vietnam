@@ -26,6 +26,7 @@ class TripFormNotifier extends _$TripFormNotifier {
     required DateTime startDate,
     DateTime? endDate,
     double? budgetTotal,
+    TripStatus status = TripStatus.active,
   }) async {
     state = const AsyncLoading<void>();
     final result =
@@ -38,7 +39,7 @@ class TripFormNotifier extends _$TripFormNotifier {
           startDate: startDate,
           endDate: endDate,
           budgetTotal: budgetTotal,
-          status: TripStatus.active,
+          status: status,
         );
     switch (result) {
       case Ok(value: final trip):

@@ -33,7 +33,7 @@ final class TripFormNotifierProvider
   TripFormNotifier create() => TripFormNotifier();
 }
 
-String _$tripFormNotifierHash() => r'4e3d022e17ea0bf2ceba754faad36679d9b1c64e';
+String _$tripFormNotifierHash() => r'7441132f556d18f90bd6511daba1446f3a476e0f';
 
 abstract class _$TripFormNotifier extends $AsyncNotifier<void> {
   FutureOr<void> build();

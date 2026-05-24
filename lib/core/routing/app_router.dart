@@ -10,6 +10,7 @@ import 'package:flutter_foundation_kit/features/transactions/presentation/expens
 import 'package:flutter_foundation_kit/features/transactions/presentation/top_up_form_page.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transfer_form_page.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_page.dart';
+import 'package:flutter_foundation_kit/features/trips/presentation/trip_form_page.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/trip_settings_page.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -86,6 +87,18 @@ GoRouter appRouter(Ref ref) => GoRouter(
       path: AppRoutes.newAccount,
       pageBuilder: (context, state) =>
           _slidePage(key: state.pageKey, child: const AccountFormPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.newTrip,
+      pageBuilder: (context, state) =>
+          _slidePage(key: state.pageKey, child: const TripFormPage()),
+    ),
+    GoRoute(
+      path: '${AppRoutes.editTrip}/:id',
+      pageBuilder: (context, state) => _slidePage(
+        key: state.pageKey,
+        child: TripFormPage(tripId: state.pathParameters['id'] ?? ''),
+      ),
     ),
     GoRoute(
       path: AppRoutes.newExpense,
