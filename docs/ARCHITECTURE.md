@@ -11,38 +11,40 @@ in doubt, copy its shape.
 
 Use a feature-first structure for product code:
 
+Split a domain into small features by aggregate (e.g. `trips`, `accounts`,
+`transactions`) rather than one large feature:
+
 ```text
 lib/
   core/
-    logging/
-    l10n/
-    result/
-    routing/
-    theme/
+    logging/  l10n/  result/  routing/  theme/
   shared/
     widgets/
   features/
-    feature_name/
-      data/                      # repositories (one per aggregate) — no providers
-      domain/                    # pure models + derived values — no providers
+    trips/
+      data/        # trip_repository.dart (+ Hive impl), trip_id_generator.dart — no providers
+      domain/      # trip.dart, currencies.dart — pure models, no providers
       application/
-        feature_name_providers.dart   # the ONLY home for this feature's providers
-        use_cases/               # plain classes: validation / orchestration / math
-      presentation/
-        widgets/
+        trips_provider.dart           # DI + trips stream
+        active_trip_provider.dart     # active trip id + active trip
+        trip_form_provider.dart       # the trip write notifier
+        use_cases/                    # plain classes: validation / orchestration / math
+      presentation/  # trip_dashboard_page.dart (cross-cutting), formatters, widgets/
+    accounts/  …    # trip_accounts_provider, trip_account_details_provider, trip_account_form_provider
+    transactions/ … # transactions_provider, trip_spend_provider, transaction_form_provider
 ```
 
 - `core/` is for app-wide primitives that should not know about features.
-- `shared/widgets/` is for reusable UI components, not feature-specific
-  sections.
-- `features/*/data` owns repositories (split by aggregate, e.g. trip / account /
-  transaction). Each exposes reactive `watch*` streams plus CRUD. No providers.
-- `features/*/domain` owns business concepts and derived values. No providers.
-- `features/*/application` owns the feature's Riverpod providers (all in
-  `<feature>_providers.dart`) and its use cases. Providers live here and nowhere
-  else.
+- `shared/widgets/` is for reusable UI components, not feature-specific sections.
+- `features/*/data` owns one repository per aggregate, exposing reactive
+  `watch*` streams plus CRUD, and its own Hive box + id generator. No providers.
+- `features/*/domain` owns that feature's models and their derived values. No
+  providers. A feature owns its model; another feature may import it when needed.
+- `features/*/application` owns the feature's providers — split into small
+  per-concern files (not one god file) — and its use cases. Providers live here
+  and nowhere else.
 - `features/*/presentation` owns pages, formatters, presentation mappers, and
-  feature widgets.
+  feature widgets. A cross-cutting page composes other features' providers.
 
 ## Dependency Direction
 
@@ -53,8 +55,10 @@ Dependencies should point toward stable concepts:
   primitives.
 - Repositories/services hide APIs, databases, SDKs, caches, and parsing.
 - Domain models do not import Flutter widgets, colors, routing, or context.
-- Feature-to-feature imports should be rare. Extract shared contracts into a
-  neutral place when collaboration becomes real.
+- Tightly related features in the same domain (trips / accounts / transactions)
+  may import each other's models and providers — e.g. `accounts` reads a `Trip`,
+  a notifier composes another feature's repository. Keep unrelated features
+  decoupled, and don't reach into another feature's `presentation/`.
 
 ### Do / Don't: Keep Domain Flutter-Free
 
@@ -241,15 +245,21 @@ Before writing `_anything` inside a page file, answer in order:
 
 ## State And Data Flow
 
-- All of a feature's providers live in one file: `application/<feature>_providers.dart`.
-- State is feature-level, not per-screen. Expose the feature's data as a small
-  set of providers; pages gather whatever they need.
+- A feature's providers live in `application/`, split into small per-concern
+  files (`trips_provider.dart`, `active_trip_provider.dart`,
+  `trip_account_form_provider.dart`, …) — never one god file, never in
+  `data/`/`domain/`.
 - Reads flow from repository `watch*` streams through data providers, so a write
   fans out to every listener automatically. There is no manual invalidation.
+- Derived values are their own providers, owned by the feature that owns the
+  data (spend metrics in `transactions`, total balance in `accounts`), each a
+  thin wrapper over a use case.
 - Writes go through notifiers (one per aggregate) that expose intent methods:
   `createTrip`, `editAccount`, `createExpense`.
-- A screen's combined data is assembled into a plain record inside a view
-  provider — never a "summary" aggregation class.
+- A cross-cutting screen composes the providers other features already expose;
+  it never invents screen-specific providers or "summary" aggregation classes.
+  A per-feature view (e.g. account detail) may assemble its data into a plain
+  record inside a feature provider.
 - Business state lives outside widgets.
 - Ephemeral UI state may stay in widgets when it is truly visual: focus,
   text controllers, hover, scroll position, tab selection.

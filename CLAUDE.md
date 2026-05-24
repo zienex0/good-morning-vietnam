@@ -4,8 +4,11 @@ This file is the entrypoint for AI coding agents (Claude Code, Codex, Cursor,
 Copilot) working in this repository. Read it first. Then follow
 `docs/ARCHITECTURE.md`, `docs/ADDING_FEATURE.md`, and `docs/REVIEW_CHECKLIST.md`.
 
-The working reference for every pattern in this kit is
-`lib/features/template/`. Copy its shape.
+The working reference for a single feature is `lib/features/template/`. For a
+real domain split into small per-aggregate features with per-concern providers,
+see `lib/features/trips`, `lib/features/accounts`, and `lib/features/transactions`
+(the trip dashboard in `features/trips/presentation` shows a cross-cutting screen
+that only consumes other features' providers). Copy their shape.
 
 ## The Two Rules You Will Most Often Break
 
@@ -20,23 +23,31 @@ If it's worth naming, it's worth a file. If it isn't worth a file, inline it.
 
 If you find yourself typing `Widget _build`, stop. That is the smell.
 
-### 2. Riverpod lives in one place; use cases hold the logic
+### 2. Providers live in `application/`; use cases hold the logic
 
-**All of a feature's providers live in `application/<feature>_providers.dart`** —
-the DI (repository) providers, the reactive data providers, the per-screen view
-providers, and the notifiers. Never declare a provider in `data/` or `domain/`.
+Split a domain into small features by aggregate — `trips`, `accounts`,
+`transactions` — each owning its model (`domain/`), repository (`data/`), and
+providers (`application/`). A feature owns its model; cross-feature imports are
+fine when a feature genuinely needs another's data (e.g. `accounts` reads a
+`Trip`).
 
-State is **feature-level, not per-screen**: a feature has its repositories, a
-small set of providers that expose their data, and a few notifiers for writes.
-Pages are pure consumers — they `ref.watch` what they need and own nothing.
+**Providers live only in `application/`**, split into small per-concern files —
+`trips_provider.dart`, `active_trip_provider.dart`, `trip_accounts_provider.dart`,
+`trip_account_form_provider.dart`, etc. Never declare a provider in `data/` or
+`domain/`. Each provider either exposes repository data (reads, over `watch*`
+streams) or derives a value through a use case; writes go through one notifier
+per aggregate. There is no manual provider invalidation — streams fan writes out.
+
+**A page only consumes providers; it never invents its own.** A cross-cutting
+screen (e.g. the trip dashboard) watches the providers other features already
+expose and composes them — it does not create dashboard-specific providers or
+"summary" aggregation classes.
 
 **Data manipulation lives in use cases** — plain classes under
-`application/use_cases/` that handle validation, multi-repository orchestration,
-or derived calculations. A use case is a plain class; never wrap one in its own
+`application/use_cases/` that validate, orchestrate multiple repositories, or
+derive calculations. A use case is a plain class; never wrap one in its own
 provider, and never create a use case that only forwards a single repository
-call. Don't build "summary" aggregation classes — assemble a screen's data into
-a plain record inside its view provider. Reads flow from repository streams;
-writes go through notifiers; there is no manual provider invalidation.
+call.
 
 ## Decision Flow Before Writing Anything Private
 

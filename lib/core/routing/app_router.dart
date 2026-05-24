@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_detail_page.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_account_form_page.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_accounts_page.dart';
-import 'package:flutter_foundation_kit/features/budgeting/presentation/budgeting_home_page.dart';
+import 'package:flutter_foundation_kit/features/accounts/presentation/account_detail_page.dart';
+import 'package:flutter_foundation_kit/features/accounts/presentation/account_form_page.dart';
+import 'package:flutter_foundation_kit/features/accounts/presentation/accounts_page.dart';
 import 'package:flutter_foundation_kit/features/gallery/presentation/gallery_page.dart';
 import 'package:flutter_foundation_kit/features/template/presentation/template_detail_page.dart';
+import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_page.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -43,7 +43,7 @@ GoRouter appRouter(Ref ref) => GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.home,
-              builder: (context, state) => const BudgetingHomePage(),
+              builder: (context, state) => const TripDashboardPage(),
             ),
           ],
         ),
@@ -51,7 +51,7 @@ GoRouter appRouter(Ref ref) => GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.accounts,
-              builder: (context, state) => const BudgetingAccountsPage(),
+              builder: (context, state) => const AccountsPage(),
             ),
           ],
         ),
@@ -67,18 +67,14 @@ GoRouter appRouter(Ref ref) => GoRouter(
     ),
     GoRoute(
       path: AppRoutes.newAccount,
-      pageBuilder: (context, state) => _slidePage(
-        key: state.pageKey,
-        child: const BudgetingAccountFormPage(),
-      ),
+      pageBuilder: (context, state) =>
+          _slidePage(key: state.pageKey, child: const AccountFormPage()),
     ),
     GoRoute(
       path: '${AppRoutes.accountDetails}/:id',
       pageBuilder: (context, state) => _slidePage(
         key: state.pageKey,
-        child: BudgetingAccountDetailPage(
-          accountId: state.pathParameters['id'] ?? '',
-        ),
+        child: AccountDetailPage(accountId: state.pathParameters['id'] ?? ''),
       ),
     ),
     GoRoute(

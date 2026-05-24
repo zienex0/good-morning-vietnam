@@ -37,17 +37,21 @@ Use this before opening or approving a PR.
 
 ## State And Data
 
-- Every provider for a feature lives in `application/<feature>_providers.dart`.
-  No providers in `data/` or `domain/`.
+- A feature's providers live in `application/`, split into small per-concern
+  files. No providers in `data/` or `domain/`, and no single god file.
+- Domains are split into small per-aggregate features (trips / accounts /
+  transactions); a feature owns its model and may import another's when needed.
 - Business state lives in providers/notifiers, not widgets.
 - Notifiers (one per aggregate) expose intent-level methods for writes.
 - Reads come from data providers over repository `watch*` streams; there is no
   manual invalidation after a write.
+- Derived values are their own providers, owned by the feature that owns the
+  data, each a thin wrapper over a use case.
 - Use cases live under `application/use_cases/` as plain classes for real logic
   (validation / orchestration / calculation). None of them has its own provider,
   and none is a one-line forward of a single repository call.
-- A screen's combined data is a plain record from a view provider, not a summary
-  aggregation class.
+- A cross-cutting screen composes other features' providers; it does not invent
+  screen-specific providers or "summary" aggregation classes.
 - Repositories normalize low-level failures and return `Result<T, Failure>`.
 - Notifiers/view providers unwrap `Result<T, Failure>` into `AsyncValue<T>`
   before the UI renders it.

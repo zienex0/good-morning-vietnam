@@ -7,8 +7,9 @@ import 'package:flutter_foundation_kit/core/logging/logger.dart';
 import 'package:flutter_foundation_kit/core/routing/app_router.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/core/theme/theme_mode_controller.dart';
-import 'package:flutter_foundation_kit/features/budgeting/application/budgeting_providers.dart';
-import 'package:flutter_foundation_kit/features/budgeting/data/hive_budgeting_boxes.dart';
+import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
+import 'package:flutter_foundation_kit/features/trips/application/trips_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -34,11 +35,19 @@ Future<void> main() async {
   };
 
   await Hive.initFlutter();
-  final boxes = await openHiveBudgetingBoxes();
+  final tripsBox = await Hive.openBox<String>('budgeting.trips');
+  final accountsBox = await Hive.openBox<String>('budgeting.accounts');
+  final transactionsBox = await Hive.openBox<String>('budgeting.transactions');
+  final settingsBox = await Hive.openBox<String>('budgeting.settings');
 
   runApp(
     ProviderScope(
-      overrides: [hiveBudgetingBoxesProvider.overrideWithValue(boxes)],
+      overrides: [
+        tripsBoxProvider.overrideWithValue(tripsBox),
+        settingsBoxProvider.overrideWithValue(settingsBox),
+        accountsBoxProvider.overrideWithValue(accountsBox),
+        transactionsBoxProvider.overrideWithValue(transactionsBox),
+      ],
       child: const MainApp(),
     ),
   );

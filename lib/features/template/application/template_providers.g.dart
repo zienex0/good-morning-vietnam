@@ -127,7 +127,7 @@ final class TemplateControllerProvider
 }
 
 String _$templateControllerHash() =>
-    r'f56b05354d0bf672935623f13b9c41800a9f59f4';
+    r'af05cb9e3bd5fe72eabbeb5684a786a6f89c446c';
 
 abstract class _$TemplateController extends $AsyncNotifier<TemplateState> {
   FutureOr<TemplateState> build();

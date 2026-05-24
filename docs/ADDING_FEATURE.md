@@ -30,9 +30,12 @@ Use package imports. Keep names boring and searchable:
 - Put repository contracts, fake implementations, DTO mapping, SDK calls, API
   calls, parsing, cache access, and local persistence in `data/`. Repositories
   expose reactive `watch*` streams plus CRUD. No providers in `data/`.
-- Put every provider for the feature in `application/<feature>_providers.dart`:
-  the DI (repository) providers, the reactive data providers, the per-screen
-  view providers, and the notifiers (one per aggregate) that own writes.
+- Put the feature's providers in `application/`, split into small per-concern
+  files (e.g. `trips_provider.dart`, `active_trip_provider.dart`,
+  `trip_account_form_provider.dart`) — the DI/repository providers, the reactive
+  data providers, derived-value providers, and one write notifier per aggregate.
+  Prefer many small per-aggregate features over one big one. A feature owns its
+  model and may import another feature's model/providers when it needs them.
 - Put feature-specific use cases in `application/use_cases/` as plain classes —
   validation, cross-repository orchestration, or derived calculations only.
   Never give a use case its own provider, and never write a use case that only
