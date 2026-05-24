@@ -133,7 +133,7 @@ class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
                     const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: amountController,
-                      autofocus: true,
+                      autofocus: false,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),

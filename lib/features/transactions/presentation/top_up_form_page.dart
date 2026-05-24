@@ -112,7 +112,7 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
                     const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: amountController,
-                      autofocus: true,
+                      autofocus: false,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),

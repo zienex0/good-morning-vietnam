@@ -185,7 +185,7 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                     const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: amountController,
-                      autofocus: true,
+                      autofocus: false,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
