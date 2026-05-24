@@ -138,12 +138,7 @@ class TripFormPageState extends ConsumerState<TripFormPage> {
             ),
           ),
           pagesSlivers: [
-            [
-              TripNameStepPage(
-                nameController: nameController,
-                autofocus: !isEditing,
-              ),
-            ],
+            [TripNameStepPage(nameController: nameController)],
             [
               TripCurrencyBudgetStepPage(
                 selectedCurrency: selectedCurrency,

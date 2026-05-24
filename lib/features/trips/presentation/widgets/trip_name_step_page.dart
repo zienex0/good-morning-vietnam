@@ -3,14 +3,9 @@ import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 
 class TripNameStepPage extends StatelessWidget {
-  const TripNameStepPage({
-    required this.nameController,
-    required this.autofocus,
-    super.key,
-  });
+  const TripNameStepPage({required this.nameController, super.key});
 
   final TextEditingController nameController;
-  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +22,6 @@ class TripNameStepPage extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: nameController,
-            autofocus: autofocus,
             textCapitalization: TextCapitalization.words,
             style: context.text.displaySmall,
             decoration: const InputDecoration(

@@ -11,8 +11,6 @@ typedef BudgetingTransactionDayGroup = ({
   List<Transaction> transactions,
 });
 
-enum BudgetingAmortizationSelection { none, daily, weekly, monthly, yearly }
-
 /// Groups [transactions] by calendar day, most recent day first. Display-only
 /// grouping for the transaction lists.
 List<BudgetingTransactionDayGroup> groupBudgetingTransactionsByDay(
@@ -61,7 +59,7 @@ String formatBudgetingTransactionSubtitle(
 ) {
   final note = transaction.note?.trim();
   if (note != null && note.isNotEmpty) {
-    return note;
+    return formatBudgetingTransactionSubtitleDetail(transaction, note);
   }
 
   final source = transaction.sourceAccountId == null
@@ -71,12 +69,13 @@ String formatBudgetingTransactionSubtitle(
       ? null
       : accountsById[transaction.destAccountId!]?.name;
 
-  return switch (transaction.type) {
+  final subtitle = switch (transaction.type) {
     TransactionType.expense => source ?? 'Expense',
     TransactionType.income => destination ?? 'Account top up',
     TransactionType.transfer =>
       '${source ?? 'Account'} to ${destination ?? 'account'}',
   };
+  return formatBudgetingTransactionSubtitleDetail(transaction, subtitle);
 }
 
 String formatBudgetingTransactionAmount(Transaction transaction) {
@@ -104,38 +103,39 @@ String formatBudgetingCurrencyOptionDetail(CurrencyOption option) {
   return '${option.flag} ${option.code} - ${option.name}';
 }
 
-String formatBudgetingAmortizationSelection(
-  BudgetingAmortizationSelection selection,
+String formatBudgetingTransactionSubtitleDetail(
+  Transaction transaction,
+  String detail,
 ) {
-  return switch (selection) {
-    BudgetingAmortizationSelection.none => 'None',
-    BudgetingAmortizationSelection.daily => 'Daily',
-    BudgetingAmortizationSelection.weekly => 'Weekly',
-    BudgetingAmortizationSelection.monthly => 'Monthly',
-    BudgetingAmortizationSelection.yearly => 'Yearly',
-  };
+  final amortization = transaction.amortization;
+  if (amortization == null) {
+    return detail;
+  }
+  return '$detail · ${formatBudgetingAmortization(amortization, transaction.occurredAt)}';
 }
 
-Amortization? amortizationForBudgetingSelection(
-  BudgetingAmortizationSelection selection,
+String formatBudgetingAmortization(
+  Amortization amortization,
+  DateTime occurredAt,
 ) {
-  return switch (selection) {
-    BudgetingAmortizationSelection.none => null,
-    BudgetingAmortizationSelection.daily => const Amortization(
-      unit: AmortizationUnit.days,
-      count: 1,
-    ),
-    BudgetingAmortizationSelection.weekly => const Amortization(
-      unit: AmortizationUnit.weeks,
-      count: 1,
-    ),
-    BudgetingAmortizationSelection.monthly => const Amortization(
-      unit: AmortizationUnit.months,
-      count: 1,
-    ),
-    BudgetingAmortizationSelection.yearly => const Amortization(
-      unit: AmortizationUnit.months,
-      count: 12,
-    ),
-  };
+  return 'Amortized over ${formatBudgetingDayCount(amortization.dayCountFrom(occurredAt))}';
+}
+
+String formatBudgetingDayCount(int days) {
+  return days == 1 ? '1 day' : '$days days';
+}
+
+int? parseBudgetingAmortizationDaysInput(String input) {
+  final value = int.tryParse(input.trim());
+  if (value == null || value < 1) {
+    return null;
+  }
+  return value;
+}
+
+Amortization? amortizationForBudgetingDayCount(int? dayCount) {
+  if (dayCount == null) {
+    return null;
+  }
+  return Amortization(unit: AmortizationUnit.days, count: dayCount);
 }

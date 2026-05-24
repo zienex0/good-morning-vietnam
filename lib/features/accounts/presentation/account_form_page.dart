@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_account_form_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_details_step_page.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_name_step_page.dart';
@@ -75,7 +74,7 @@ class AccountFormPageState extends ConsumerState<AccountFormPage> {
             [
               AccountNameStepPage(
                 nameController: nameController,
-                autofocus: true,
+                autofocus: false,
               ),
             ],
             [

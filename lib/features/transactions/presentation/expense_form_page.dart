@@ -5,6 +5,7 @@ import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/transaction_form_provider.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/expense_amortization_fields.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/currencies.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
@@ -20,15 +21,16 @@ class ExpenseFormPage extends ConsumerStatefulWidget {
 
 class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
   final amountController = TextEditingController();
+  final amortizationDaysController = TextEditingController(text: '7');
   String? selectedAccountId;
   String selectedCurrency = 'USD';
   String selectedCategoryId = kBudgetingDefaultCategories.first.id;
-  BudgetingAmortizationSelection selectedAmortization =
-      BudgetingAmortizationSelection.none;
+  bool amortizesExpense = false;
 
   @override
   void dispose() {
     amountController.dispose();
+    amortizationDaysController.dispose();
     super.dispose();
   }
 
@@ -71,6 +73,17 @@ class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
                         AppSnackBars.error(context, 'Enter a valid amount.');
                         return;
                       }
+                      final amortizationDayCount =
+                          parseBudgetingAmortizationDaysInput(
+                            amortizationDaysController.text,
+                          );
+                      if (amortizesExpense && amortizationDayCount == null) {
+                        AppSnackBars.error(
+                          context,
+                          'Enter at least 1 amortization day.',
+                        );
+                        return;
+                      }
 
                       final saved = await ref
                           .read(transactionFormProvider.notifier)
@@ -80,8 +93,8 @@ class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
                             categoryId: selectedCategoryId,
                             amount: amount,
                             paidCurrency: selectedCurrency,
-                            amortization: amortizationForBudgetingSelection(
-                              selectedAmortization,
+                            amortization: amortizationForBudgetingDayCount(
+                              amortizesExpense ? amortizationDayCount : null,
                             ),
                           );
                       if (!context.mounted) {
@@ -204,27 +217,12 @@ class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
                     const SizedBox(height: AppSpacing.pageWithinSectionGap),
                     const AppSectionHeader(title: 'Amortization'),
                     const SizedBox(height: AppSpacing.md),
-                    AppDropdown<BudgetingAmortizationSelection>(
-                      value: selectedAmortization,
-                      showNoneOption: false,
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => selectedAmortization = value);
-                        }
+                    ExpenseAmortizationFields(
+                      enabled: amortizesExpense,
+                      daysController: amortizationDaysController,
+                      onEnabledChanged: (value) {
+                        setState(() => amortizesExpense = value);
                       },
-                      options: [
-                        for (final selection
-                            in BudgetingAmortizationSelection.values)
-                          AppDropdownOption(
-                            value: selection,
-                            child: Text(
-                              formatBudgetingAmortizationSelection(selection),
-                            ),
-                            selectedChild: Text(
-                              formatBudgetingAmortizationSelection(selection),
-                            ),
-                          ),
-                      ],
                     ),
                   ],
                 ],

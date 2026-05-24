@@ -153,7 +153,7 @@ class AppStepPageViewState extends State<AppStepPageView> {
             child: TweenAnimationBuilder<double>(
               tween: Tween(end: progress),
               duration: const Duration(milliseconds: 300),
-              builder: (_, value, __) => LinearProgressIndicator(
+              builder: (_, value, child) => LinearProgressIndicator(
                 value: value,
                 minHeight: AppSpacing.xs,
               ),
