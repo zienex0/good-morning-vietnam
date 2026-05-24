@@ -10,6 +10,7 @@ import 'package:flutter_foundation_kit/features/transactions/presentation/expens
 import 'package:flutter_foundation_kit/features/transactions/presentation/top_up_form_page.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transfer_form_page.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_page.dart';
+import 'package:flutter_foundation_kit/features/trips/presentation/trip_settings_page.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -39,6 +40,11 @@ GoRouter appRouter(Ref ref) => GoRouter(
             icon: Icons.widgets_outlined,
             selectedIcon: Icons.widgets_rounded,
           ),
+          AppShellDestination(
+            label: 'Trip',
+            icon: Icons.settings_outlined,
+            selectedIcon: Icons.settings,
+          ),
         ],
       ),
       branches: [
@@ -63,6 +69,14 @@ GoRouter appRouter(Ref ref) => GoRouter(
             GoRoute(
               path: AppRoutes.gallery,
               builder: (context, state) => const GalleryPage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.tripSettings,
+              builder: (context, state) => const TripSettingsPage(),
             ),
           ],
         ),
