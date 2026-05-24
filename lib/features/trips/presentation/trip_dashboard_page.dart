@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/accounts_total_balance_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
@@ -14,6 +17,7 @@ import 'package:flutter_foundation_kit/features/trips/application/trip_days_left
 import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_formatters.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Survival dashboard for the active trip. It owns no providers of its own —
 /// it composes the data each feature already exposes.
@@ -89,6 +93,42 @@ class TripDashboardPage extends ConsumerWidget {
         return AppSliverPage(
           title: trip.name,
           subtitle: 'Survival dashboard',
+          actions: [
+            Tooltip(
+              message: 'Add transaction',
+              child: IconButton.filled(
+                onPressed: () {
+                  unawaited(
+                    AppActionSheet.show(
+                      context,
+                      title: 'Add transaction',
+                      actions: [
+                        AppAction(
+                          label: 'Expense',
+                          icon: Icons.remove_circle_outline_rounded,
+                          onPressed: () =>
+                              unawaited(context.push(AppRoutes.newExpense)),
+                        ),
+                        AppAction(
+                          label: 'Top up',
+                          icon: Icons.add_circle_outline_rounded,
+                          onPressed: () =>
+                              unawaited(context.push(AppRoutes.newTopUp)),
+                        ),
+                        AppAction(
+                          label: 'Transfer',
+                          icon: Icons.swap_horiz_rounded,
+                          onPressed: () =>
+                              unawaited(context.push(AppRoutes.newTransfer)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ),
+          ],
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
@@ -123,24 +163,25 @@ class TripDashboardPage extends ConsumerWidget {
                     child: Column(
                       children: [
                         AppKeyValueRow(
-                          label: 'Average daily spend',
-                          value: formatBudgetingMoney(
-                            averageDailySpend,
-                            currency,
-                          ),
+                          label: 'Total account balance',
+                          value: formatBudgetingMoney(totalBalance, currency),
                         ),
                         AppKeyValueRow(
                           label: 'Total spend',
                           value: formatBudgetingMoney(totalSpend, currency),
                         ),
                         AppKeyValueRow(
-                          label: 'Total account balance',
-                          value: formatBudgetingMoney(totalBalance, currency),
-                          emphasized: true,
-                        ),
-                        AppKeyValueRow(
                           label: 'Current day of trip',
                           value: formatBudgetingCurrentDay(currentDay),
+                        ),
+                        const Divider(),
+                        AppKeyValueRow(
+                          label: 'Average daily spend',
+                          value: formatBudgetingMoney(
+                            averageDailySpend,
+                            currency,
+                          ),
+                          emphasized: true,
                         ),
                       ],
                     ),

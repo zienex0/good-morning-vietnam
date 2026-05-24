@@ -6,6 +6,9 @@ import 'package:flutter_foundation_kit/features/accounts/presentation/account_fo
 import 'package:flutter_foundation_kit/features/accounts/presentation/accounts_page.dart';
 import 'package:flutter_foundation_kit/features/gallery/presentation/gallery_page.dart';
 import 'package:flutter_foundation_kit/features/template/presentation/template_detail_page.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/expense_form_page.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/top_up_form_page.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/transfer_form_page.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_page.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -69,6 +72,21 @@ GoRouter appRouter(Ref ref) => GoRouter(
       path: AppRoutes.newAccount,
       pageBuilder: (context, state) =>
           _slidePage(key: state.pageKey, child: const AccountFormPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.newExpense,
+      pageBuilder: (context, state) =>
+          _slidePage(key: state.pageKey, child: const ExpenseFormPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.newTopUp,
+      pageBuilder: (context, state) =>
+          _slidePage(key: state.pageKey, child: const TopUpFormPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.newTransfer,
+      pageBuilder: (context, state) =>
+          _slidePage(key: state.pageKey, child: const TransferFormPage()),
     ),
     GoRoute(
       path: '${AppRoutes.accountDetails}/:id',

@@ -1,6 +1,8 @@
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
+import 'package:flutter_foundation_kit/features/transactions/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
+import 'package:flutter_foundation_kit/features/trips/domain/currencies.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 
@@ -8,6 +10,8 @@ typedef BudgetingTransactionDayGroup = ({
   DateTime date,
   List<Transaction> transactions,
 });
+
+enum BudgetingAmortizationSelection { none, daily, weekly, monthly, yearly }
 
 /// Groups [transactions] by calendar day, most recent day first. Display-only
 /// grouping for the transaction lists.
@@ -85,5 +89,53 @@ String formatBudgetingTransactionAmount(Transaction transaction) {
       '${formatBudgetingMoney(transaction.paidAmount, transaction.paidCurrency)}'
           ' to '
           '${formatBudgetingMoney(transaction.destAmount ?? 0, transaction.destCurrency ?? transaction.paidCurrency)}',
+  };
+}
+
+String formatBudgetingAccountOption(Account account) {
+  return '${account.name} · ${account.currency}';
+}
+
+String formatBudgetingCurrencyOption(CurrencyOption option) {
+  return '${option.flag} ${option.code}';
+}
+
+String formatBudgetingCurrencyOptionDetail(CurrencyOption option) {
+  return '${option.flag} ${option.code} - ${option.name}';
+}
+
+String formatBudgetingAmortizationSelection(
+  BudgetingAmortizationSelection selection,
+) {
+  return switch (selection) {
+    BudgetingAmortizationSelection.none => 'None',
+    BudgetingAmortizationSelection.daily => 'Daily',
+    BudgetingAmortizationSelection.weekly => 'Weekly',
+    BudgetingAmortizationSelection.monthly => 'Monthly',
+    BudgetingAmortizationSelection.yearly => 'Yearly',
+  };
+}
+
+Amortization? amortizationForBudgetingSelection(
+  BudgetingAmortizationSelection selection,
+) {
+  return switch (selection) {
+    BudgetingAmortizationSelection.none => null,
+    BudgetingAmortizationSelection.daily => const Amortization(
+      unit: AmortizationUnit.days,
+      count: 1,
+    ),
+    BudgetingAmortizationSelection.weekly => const Amortization(
+      unit: AmortizationUnit.weeks,
+      count: 1,
+    ),
+    BudgetingAmortizationSelection.monthly => const Amortization(
+      unit: AmortizationUnit.months,
+      count: 1,
+    ),
+    BudgetingAmortizationSelection.yearly => const Amortization(
+      unit: AmortizationUnit.months,
+      count: 12,
+    ),
   };
 }

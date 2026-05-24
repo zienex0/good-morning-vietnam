@@ -21,14 +21,6 @@ String formatBudgetingAccountLocalBalance({
   return formatBudgetingMoney(amount, currency);
 }
 
-double? parseBudgetingAmountInput(String value) {
-  final normalized = value.trim().replaceAll(',', '.');
-  if (normalized.isEmpty) {
-    return 0;
-  }
-  return double.tryParse(normalized);
-}
-
 String formatBudgetingCurrencyOption(CurrencyOption option) {
   return '${option.flag} ${option.code}';
 }

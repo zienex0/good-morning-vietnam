@@ -63,3 +63,11 @@ String formatMonth(DateTime date) => _monthFormat.format(date);
 String formatChartNumber(double value) => _chartNumberFormat.format(value);
 
 String formatPercent(double value) => _percentFormat.format(value);
+
+double? parseBudgetingAmountInput(String value) {
+  final normalized = value.trim().replaceAll(',', '.');
+  if (normalized.isEmpty) {
+    return 0;
+  }
+  return double.tryParse(normalized);
+}
