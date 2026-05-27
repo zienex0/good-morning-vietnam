@@ -9,12 +9,18 @@ class AppStepPageView extends StatefulWidget {
     this.actions = const [],
     this.bottomNavigationBar,
     this.physics,
+    this.pageScrollPhysics = const [],
     this.onPageChanged,
     this.initialPage = 0,
     super.key,
   }) : assert(
          titles.length == pagesSlivers.length,
          'The amount of titles must exactly match the amount of pages.',
+       ),
+       assert(
+         pageScrollPhysics.length == 0 ||
+             pageScrollPhysics.length == pagesSlivers.length,
+         'Page scroll physics must be empty or match the amount of pages.',
        );
 
   final List<Widget> titles;
@@ -27,6 +33,8 @@ class AppStepPageView extends StatefulWidget {
   final Widget? bottomNavigationBar;
 
   final ScrollPhysics? physics;
+
+  final List<ScrollPhysics?> pageScrollPhysics;
 
   final ValueChanged<int>? onPageChanged;
 
@@ -166,12 +174,19 @@ class AppStepPageViewState extends State<AppStepPageView> {
           physics: widget.physics,
           itemCount: widget.pagesSlivers.length,
           itemBuilder: (context, index) {
+            final pageSlivers = widget.pagesSlivers[index];
             return CustomScrollView(
+              physics: widget.pageScrollPhysics.isEmpty
+                  ? null
+                  : widget.pageScrollPhysics[index],
               slivers: [
-                ...widget.pagesSlivers[index],
-                SliverPadding(
-                  padding: EdgeInsets.only(bottom: bottomContentPadding),
-                ),
+                ...pageSlivers,
+                if (pageSlivers.isEmpty ||
+                    (pageSlivers.last is! SliverFillRemaining &&
+                        pageSlivers.last is! SliverMainAxisGroup))
+                  SliverPadding(
+                    padding: EdgeInsets.only(bottom: bottomContentPadding),
+                  ),
               ],
             );
           },

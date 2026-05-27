@@ -68,7 +68,6 @@ class AccountDetailPage extends ConsumerWidget {
                                           children: [
                                             TextFormField(
                                               initialValue: currentName,
-                                              autofocus: false,
                                               textCapitalization:
                                                   TextCapitalization.words,
                                               decoration: const InputDecoration(

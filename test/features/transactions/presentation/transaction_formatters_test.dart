@@ -33,6 +33,22 @@ void main() {
       );
     });
 
+    test('formats amount input seeds without floating-point dust', () {
+      expect(formatBudgetingAmountInputValue(0), '0');
+      expect(formatBudgetingAmountInputValue(7.105427357601002e-15), '0');
+      expect(formatBudgetingAmountInputValue(10.0000000001), '10');
+      expect(formatBudgetingAmountInputValue(10.5), '10.5');
+      expect(formatBudgetingAmountInputValue(10.55), '10.55');
+    });
+
+    test('formats amount input text as currency', () {
+      expect(formatBudgetingAmountInputMoney('', 'PLN'), '');
+      expect(formatBudgetingAmountInputMoney('0', 'PLN'), 'zł0');
+      expect(formatBudgetingAmountInputMoney('10', 'USD'), r'$10');
+      expect(formatBudgetingAmountInputMoney('10,5', 'EUR'), '€10.5');
+      expect(formatBudgetingAmountInputMoney('10.55', 'EUR'), '€10.55');
+    });
+
     test('adds amortization detail to transaction subtitles', () {
       const account = Account(
         id: 'usd',

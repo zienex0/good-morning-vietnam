@@ -19,8 +19,15 @@ class TransferFormPage extends ConsumerStatefulWidget {
 class TransferFormPageState extends ConsumerState<TransferFormPage> {
   final amountController = TextEditingController();
   final receivedAmountController = TextEditingController();
+  late TextEditingController activeAmountController;
   String? sourceAccountId;
   String? destinationAccountId;
+
+  @override
+  void initState() {
+    super.initState();
+    activeAmountController = amountController;
+  }
 
   @override
   void dispose() {
@@ -51,6 +58,10 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
         sourceAccount != null &&
         destinationAccount != null &&
         sourceAccount.currency != destinationAccount.currency;
+    if (!isCrossCurrency &&
+        activeAmountController == receivedAmountController) {
+      activeAmountController = amountController;
+    }
 
     return AppAsyncValueView(
       value: tripAsync,
@@ -133,7 +144,7 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                 AppSpacing.page,
                 AppSpacing.pageWithinSectionGap,
                 AppSpacing.page,
-                AppSpacing.pageBetweenSectionGap,
+                AppSpacing.none,
               ),
               sliver: SliverList.list(
                 children: [
@@ -185,11 +196,14 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                     const SizedBox(height: AppSpacing.md),
                     TextField(
                       controller: amountController,
-                      autofocus: false,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
+                      readOnly: true,
+                      showCursor: true,
                       style: context.text.displaySmall,
+                      onTap: () {
+                        setState(
+                          () => activeAmountController = amountController,
+                        );
+                      },
                       decoration: InputDecoration(
                         labelText: 'From amount',
                         hintText: '0',
@@ -200,10 +214,15 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                       const SizedBox(height: AppSpacing.md),
                       TextField(
                         controller: receivedAmountController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
+                        readOnly: true,
+                        showCursor: true,
                         style: context.text.displaySmall,
+                        onTap: () {
+                          setState(
+                            () => activeAmountController =
+                                receivedAmountController,
+                          );
+                        },
                         decoration: InputDecoration(
                           labelText: 'Received amount',
                           hintText: '0',
@@ -253,10 +272,20 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                           ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.pageWithinSectionGap),
                   ],
                 ],
               ),
             ),
+            if (accounts.length >= 2)
+              SliverFillRemaining(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.page,
+                  ),
+                  child: AppNumpad(controller: activeAmountController),
+                ),
+              ),
           ],
         );
       },

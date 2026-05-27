@@ -388,8 +388,17 @@ ThemeData buildAppTheme(AppPalette palette) {
       ),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
+      // The active part of the indicator
       color: palette.accent,
-      circularTrackColor: palette.surfaceStrong,
+
+      circularTrackColor: palette.surfaceStrong.withValues(alpha: 0.48),
+      linearTrackColor: palette.surfaceStrong.withValues(alpha: 0.48),
+
+      linearMinHeight: AppSpacing.sm,
+
+      borderRadius: const BorderRadius.all(AppRadii.pill),
+
+      refreshBackgroundColor: palette.sheet,
     ),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: palette.accent,

@@ -25,6 +25,7 @@ export 'app_formatters.dart';
 export 'app_key_value_row.dart';
 export 'app_list_section.dart';
 export 'app_loading_overlay.dart';
+export 'app_numpad.dart';
 export 'app_rounded_bar_chart.dart';
 export 'app_section_header.dart';
 export 'app_shell.dart';

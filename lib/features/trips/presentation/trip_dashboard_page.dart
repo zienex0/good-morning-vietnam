@@ -121,6 +121,12 @@ class TripDashboardPage extends ConsumerWidget {
                           onPressed: () =>
                               unawaited(context.push(AppRoutes.newTransfer)),
                         ),
+                        AppAction(
+                          label: 'Set balance',
+                          icon: Icons.account_balance_wallet_outlined,
+                          onPressed: () =>
+                              unawaited(context.push(AppRoutes.setBalance)),
+                        ),
                       ],
                     ),
                   );

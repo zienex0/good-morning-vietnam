@@ -7,6 +7,7 @@ abstract final class AppRoutes {
   static const String newExpense = '/transactions/expense/new';
   static const String newTopUp = '/transactions/top-up/new';
   static const String newTransfer = '/transactions/transfer/new';
+  static const String setBalance = '/transactions/set-balance';
   static const String tripSettings = '/trip';
   static const String newTrip = '/trip/new';
   static const String editTrip = '/trip/edit';

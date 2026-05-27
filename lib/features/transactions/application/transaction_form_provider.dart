@@ -8,6 +8,7 @@ import 'package:flutter_foundation_kit/features/transactions/application/use_cas
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_top_up_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_transfer_use_case.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/use_cases/set_account_balances_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/trips/application/trips_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -95,6 +96,24 @@ class TransactionFormNotifier extends _$TransactionFormNotifier {
           occurredAt: DateTime.now(),
         ),
     'Transfer creation failed',
+  );
+
+  Future<bool> setAccountBalances({
+    required String tripId,
+    required Map<String, double> balancesByAccountId,
+  }) => _run(
+    () =>
+        SetAccountBalancesUseCase(
+          tripRepository: ref.read(tripRepositoryProvider),
+          accountRepository: ref.read(accountRepositoryProvider),
+          transactionRepository: ref.read(transactionRepositoryProvider),
+          idGenerator: ref.read(transactionIdGeneratorProvider),
+        ).call(
+          tripId: tripId,
+          balancesByAccountId: balancesByAccountId,
+          occurredAt: DateTime.now(),
+        ),
+    'Balance adjustment failed',
   );
 
   Future<bool> _run(

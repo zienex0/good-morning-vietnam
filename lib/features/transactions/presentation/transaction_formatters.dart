@@ -43,6 +43,38 @@ String formatBudgetingMoney(
   return formatCurrency(amount, name: currency, decimalDigits: decimalDigits);
 }
 
+String formatBudgetingAmountInputValue(double amount) {
+  final normalized = amount.abs() < 0.000001 ? 0.0 : amount;
+  final rounded = normalized.roundToDouble();
+  if ((normalized - rounded).abs() < 0.000001) {
+    return rounded.toStringAsFixed(0);
+  }
+
+  return normalized
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+}
+
+String formatBudgetingAmountInputMoney(String input, CurrencyCode currency) {
+  final trimmed = input.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+
+  final amount = parseBudgetingAmountInput(trimmed);
+  if (amount == null) {
+    return trimmed;
+  }
+
+  final normalized = trimmed.replaceAll(',', '.');
+  final separatorIndex = normalized.indexOf('.');
+  final decimalDigits = separatorIndex == -1
+      ? 0
+      : normalized.length - separatorIndex - 1;
+  return formatBudgetingMoney(amount, currency, decimalDigits: decimalDigits);
+}
+
 String formatBudgetingTransactionTitle(Transaction transaction) {
   return switch (transaction.type) {
     TransactionType.expense => budgetingCategoryById(
@@ -88,6 +120,14 @@ String formatBudgetingTransactionAmount(Transaction transaction) {
       '${formatBudgetingMoney(transaction.paidAmount, transaction.paidCurrency)}'
           ' to '
           '${formatBudgetingMoney(transaction.destAmount ?? 0, transaction.destCurrency ?? transaction.paidCurrency)}',
+  };
+}
+
+String formatBudgetingTransactionInputSign(TransactionType type) {
+  return switch (type) {
+    TransactionType.expense => '-',
+    TransactionType.income => '+',
+    TransactionType.transfer => '',
   };
 }
 

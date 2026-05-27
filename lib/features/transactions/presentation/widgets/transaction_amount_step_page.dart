@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/accounts/presentation/account_formatters.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/transaction_amount_field.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/currencies.dart';
-import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 
-class TripCurrencyBudgetStepPage extends StatelessWidget {
-  const TripCurrencyBudgetStepPage({
-    required this.selectedCurrency,
-    required this.budgetController,
+class TransactionAmountStepPage extends StatelessWidget {
+  const TransactionAmountStepPage({
+    required this.amountController,
+    required this.currency,
     required this.onCurrencyChanged,
+    this.amountPrefix,
     super.key,
   });
 
-  final CurrencyCode selectedCurrency;
-  final TextEditingController budgetController;
-  final ValueChanged<CurrencyCode> onCurrencyChanged;
+  final TextEditingController amountController;
+  final String currency;
+  final ValueChanged<String> onCurrencyChanged;
+  final String? amountPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -30,23 +32,14 @@ class TripCurrencyBudgetStepPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AppSectionHeader(title: 'Budget'),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: budgetController,
-              readOnly: true,
-              showCursor: true,
-              style: context.text.headlineMedium,
-              decoration: InputDecoration(
-                hintText: 'Optional',
-                suffixText: selectedCurrency,
-              ),
+            TransactionAmountField(
+              amountController: amountController,
+              amountPrefix: amountPrefix,
+              currency: currency,
             ),
             const SizedBox(height: AppSpacing.pageWithinSectionGap),
-            const AppSectionHeader(title: 'Currency'),
-            const SizedBox(height: AppSpacing.md),
-            AppDropdown<CurrencyCode>(
-              value: selectedCurrency,
+            AppDropdown<String>(
+              value: currency,
               showNoneOption: false,
               onChanged: (value) {
                 if (value != null) {
@@ -63,7 +56,7 @@ class TripCurrencyBudgetStepPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.pageWithinSectionGap),
-            Expanded(child: AppNumpad(controller: budgetController)),
+            Expanded(child: AppNumpad(controller: amountController)),
           ],
         ),
       ),

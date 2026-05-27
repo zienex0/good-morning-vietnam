@@ -6,7 +6,9 @@ import 'package:flutter_foundation_kit/features/transactions/application/use_cas
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_expense_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_top_up_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/create_transfer_use_case.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/use_cases/set_account_balances_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/amortization.dart';
+import 'package:flutter_foundation_kit/features/transactions/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -162,6 +164,124 @@ void main() {
     expect(transaction.paidAmount, 10000);
     expect(transaction.accountAmount, 10000);
   });
+
+  test('sets a higher account balance with an income transaction', () async {
+    final trip = testTrip();
+    const account = Account(
+      id: 'account-1',
+      tripId: 'trip-1',
+      name: 'USD cash',
+      type: AccountType.cash,
+      currency: 'USD',
+      openingBalance: 50,
+    );
+    final repository = FakeTransactionRepository(
+      transactions: [testExpense(sourceAccountId: account.id)],
+    );
+    final useCase = SetAccountBalancesUseCase(
+      tripRepository: FakeTripRepository(trips: [trip]),
+      accountRepository: FakeAccountRepository(accounts: [account]),
+      transactionRepository: repository,
+      idGenerator: const FakeTransactionIdGenerator('txn-adjustment'),
+    );
+
+    final transactions = expectOk(
+      await useCase(
+        tripId: trip.id,
+        balancesByAccountId: {account.id: 75},
+        occurredAt: DateTime(2026, 5, 22),
+      ),
+    );
+
+    expect(transactions, hasLength(1));
+    expect(transactions.single.type, TransactionType.income);
+    expect(transactions.single.destAccountId, account.id);
+    expect(transactions.single.accountAmount, 35);
+    expect(
+      account.balanceFrom(
+        expectOk(await repository.fetchTransactions(tripId: trip.id)),
+      ),
+      75,
+    );
+  });
+
+  test('sets a lower account balance with an adjustment expense', () async {
+    final trip = testTrip();
+    const account = Account(
+      id: 'account-1',
+      tripId: 'trip-1',
+      name: 'USD cash',
+      type: AccountType.cash,
+      currency: 'USD',
+      openingBalance: 50,
+    );
+    final repository = FakeTransactionRepository();
+    final useCase = SetAccountBalancesUseCase(
+      tripRepository: FakeTripRepository(trips: [trip]),
+      accountRepository: FakeAccountRepository(accounts: [account]),
+      transactionRepository: repository,
+      idGenerator: const FakeTransactionIdGenerator('txn-adjustment'),
+    );
+
+    final transactions = expectOk(
+      await useCase(
+        tripId: trip.id,
+        balancesByAccountId: {account.id: 20},
+        occurredAt: DateTime(2026, 5, 22),
+      ),
+    );
+
+    expect(transactions, hasLength(1));
+    expect(transactions.single.type, TransactionType.expense);
+    expect(transactions.single.sourceAccountId, account.id);
+    expect(
+      transactions.single.categoryId,
+      kBudgetingBalanceAdjustmentCategoryId,
+    );
+    expect(transactions.single.accountAmount, 30);
+    expect(
+      account.balanceFrom(
+        expectOk(await repository.fetchTransactions(tripId: trip.id)),
+      ),
+      20,
+    );
+  });
+
+  test(
+    'does not create a transaction when the account balance is unchanged',
+    () async {
+      final trip = testTrip();
+      const account = Account(
+        id: 'account-1',
+        tripId: 'trip-1',
+        name: 'USD cash',
+        type: AccountType.cash,
+        currency: 'USD',
+        openingBalance: 50,
+      );
+      final repository = FakeTransactionRepository();
+      final useCase = SetAccountBalancesUseCase(
+        tripRepository: FakeTripRepository(trips: [trip]),
+        accountRepository: FakeAccountRepository(accounts: [account]),
+        transactionRepository: repository,
+        idGenerator: const FakeTransactionIdGenerator('txn-adjustment'),
+      );
+
+      final transactions = expectOk(
+        await useCase(
+          tripId: trip.id,
+          balancesByAccountId: {account.id: 50},
+          occurredAt: DateTime(2026, 5, 22),
+        ),
+      );
+
+      expect(transactions, isEmpty);
+      expect(
+        expectOk(await repository.fetchTransactions(tripId: trip.id)),
+        isEmpty,
+      );
+    },
+  );
 
   test(
     'records a cross-currency transfer with the supplied received amount',

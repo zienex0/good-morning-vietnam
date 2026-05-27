@@ -89,7 +89,8 @@ class AppSliverPage extends StatelessWidget {
           ),
         ),
         ...slivers,
-        SliverPadding(padding: EdgeInsets.only(bottom: bottomContentPadding)),
+        if (slivers.isEmpty || slivers.last is! SliverFillRemaining)
+          SliverPadding(padding: EdgeInsets.only(bottom: bottomContentPadding)),
       ],
     );
 

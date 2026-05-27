@@ -1,5 +1,11 @@
 import 'package:flutter_foundation_kit/features/transactions/domain/category.dart';
 
+const String kBudgetingBalanceAdjustmentCategoryId = 'adjustment';
+const Category kBudgetingBalanceAdjustmentCategory = Category(
+  id: kBudgetingBalanceAdjustmentCategoryId,
+  name: 'Adjustment',
+);
+
 const List<Category> kBudgetingDefaultCategories = [
   Category(id: 'food', name: 'Food'),
   Category(id: 'coffee', name: 'Coffee'),
@@ -10,6 +16,9 @@ const List<Category> kBudgetingDefaultCategories = [
 ];
 
 Category budgetingCategoryById(String id) {
+  if (id == kBudgetingBalanceAdjustmentCategoryId) {
+    return kBudgetingBalanceAdjustmentCategory;
+  }
   return kBudgetingDefaultCategories.firstWhere(
     (category) => category.id == id,
     orElse: () => kBudgetingDefaultCategories.first,

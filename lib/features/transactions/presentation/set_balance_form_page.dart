@@ -1,61 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
-import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/transaction_form_provider.dart';
-import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/top_up_details_step_page.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/transaction_amount_step_page.dart';
+import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/set_balance_account_step_page.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:flutter_foundation_kit/shared/widgets/app_step_page_view.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class TopUpFormPage extends ConsumerStatefulWidget {
-  const TopUpFormPage({super.key});
+class SetBalanceFormPage extends ConsumerStatefulWidget {
+  const SetBalanceFormPage({super.key});
 
   @override
-  ConsumerState<TopUpFormPage> createState() => TopUpFormPageState();
+  ConsumerState<SetBalanceFormPage> createState() => SetBalanceFormPageState();
 }
 
-class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
+class SetBalanceFormPageState extends ConsumerState<SetBalanceFormPage> {
   final stepPageKey = GlobalKey<AppStepPageViewState>();
-  final amountController = TextEditingController();
-  String? selectedAccountId;
-  String selectedCurrency = 'USD';
+  final balanceControllers = <String, TextEditingController>{};
   int currentPage = 0;
 
   @override
   void dispose() {
-    amountController.dispose();
+    for (final controller in balanceControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
-    final accountsAsync = ref.watch(accountsProvider);
+    final accountsAsync = ref.watch(tripAccountsProvider);
     final formState = ref.watch(transactionFormProvider);
-    final accounts = accountsAsync.value ?? const <Account>[];
-
-    if (selectedAccountId == null && accounts.isNotEmpty) {
-      selectedAccountId = accounts.first.id;
-      selectedCurrency = accounts.first.currency;
-    }
-
-    final accountsById = {for (final account in accounts) account.id: account};
-    final selectedAccount = accountsById[selectedAccountId];
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
-      value: tripAsync,
-      onRetry: () => ref.invalidate(activeTripProvider),
-      data: (trip) {
+      value: accountsAsync,
+      onRetry: () => ref.invalidate(tripAccountsProvider),
+      data: (accounts) {
+        syncBalanceControllers(accounts);
+        final trip = tripAsync.value;
+
         if (accounts.isEmpty) {
           return AppSliverPage(
-            title: 'Add top up',
+            title: 'Set balance',
             subtitle: trip?.name ?? 'No active trip',
             leading: const AppBackButton(),
             slivers: [
@@ -70,7 +61,7 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
                   children: [
                     AppCard(
                       child: Text(
-                        'Add an account before recording transactions.',
+                        'Add an account before setting balances.',
                         style: context.mutedText.bodyMedium,
                       ),
                     ),
@@ -85,10 +76,8 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
           key: stepPageKey,
           initialPage: currentPage,
           leading: const AppBackButton(),
-          physics: const NeverScrollableScrollPhysics(),
-          pageScrollPhysics: const [NeverScrollableScrollPhysics(), null],
           onPageChanged: (value) => setState(() => currentPage = value),
-          titles: const [Text('Top up amount'), Text('Top up details')],
+          titles: [for (final account in accounts) Text(account.account.name)],
           bottomNavigationBar: AppBottomActionBar(
             child: Row(
               children: [
@@ -98,68 +87,77 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
                 ),
                 const Spacer(),
                 AppButton.primary(
-                  label: currentPage == 0 ? 'Next' : 'Save top up',
+                  label: currentPage == accounts.length - 1
+                      ? 'Save balances'
+                      : 'Next',
                   loading: isBusy,
-                  onPressed: trip == null || selectedAccount == null
+                  onPressed: trip == null
                       ? null
                       : () => handlePrimaryPressed(
                           tripId: trip.id,
-                          selectedAccount: selectedAccount,
+                          accounts: accounts,
                         ),
                 ),
               ],
             ),
           ),
           pagesSlivers: [
-            [
-              TransactionAmountStepPage(
-                amountController: amountController,
-                amountPrefix: formatBudgetingTransactionInputSign(
-                  TransactionType.income,
+            for (final account in accounts)
+              [
+                SetBalanceAccountStepPage(
+                  accountBalance: account,
+                  balanceController: balanceControllers[account.account.id]!,
                 ),
-                currency: selectedCurrency,
-                onCurrencyChanged: (value) {
-                  setState(() => selectedCurrency = value);
-                },
-              ),
-            ],
-            [
-              TopUpDetailsStepPage(
-                accounts: accounts,
-                selectedAccountId: selectedAccountId,
-                onAccountChanged: (account) {
-                  setState(() => selectedAccountId = account.id);
-                },
-              ),
-            ],
+              ],
           ],
         );
       },
     );
   }
 
-  Future<void> handlePrimaryPressed({
-    required String tripId,
-    required Account selectedAccount,
-  }) async {
-    final amount = parseBudgetingAmountInput(amountController.text);
-    if (amount == null || amount <= 0) {
-      AppSnackBars.error(context, 'Enter a valid amount.');
-      return;
+  void syncBalanceControllers(List<AccountBalance> accounts) {
+    final accountIds = {for (final account in accounts) account.account.id};
+    final removedIds = balanceControllers.keys
+        .where((accountId) => !accountIds.contains(accountId))
+        .toList();
+    for (final accountId in removedIds) {
+      balanceControllers.remove(accountId)?.dispose();
     }
 
-    if (currentPage == 0) {
+    for (final account in accounts) {
+      balanceControllers.putIfAbsent(account.account.id, () {
+        final text = formatBudgetingAmountInputValue(account.localBalance);
+        return TextEditingController(text: text)
+          ..selection = TextSelection(baseOffset: 0, extentOffset: text.length);
+      });
+    }
+  }
+
+  Future<void> handlePrimaryPressed({
+    required String tripId,
+    required List<AccountBalance> accounts,
+  }) async {
+    if (currentPage < accounts.length - 1) {
       await stepPageKey.currentState?.incrementPageIndex();
       return;
     }
 
+    final balancesByAccountId = <String, double>{};
+    for (final account in accounts) {
+      final controller = balanceControllers[account.account.id];
+      final amount = parseBudgetingAmountInput(controller?.text ?? '');
+      if (amount == null || amount < 0) {
+        AppSnackBars.error(context, 'Enter a valid balance.');
+        return;
+      }
+      balancesByAccountId[account.account.id] = amount;
+    }
+
     final saved = await ref
         .read(transactionFormProvider.notifier)
-        .createTopUp(
+        .setAccountBalances(
           tripId: tripId,
-          accountId: selectedAccount.id,
-          amount: amount,
-          paidCurrency: selectedCurrency,
+          balancesByAccountId: balancesByAccountId,
         );
     if (!mounted) {
       return;
@@ -167,7 +165,7 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
     if (saved) {
       context.pop();
     } else {
-      AppSnackBars.error(context, 'Could not save the top up.');
+      AppSnackBars.error(context, 'Could not set account balances.');
     }
   }
 
