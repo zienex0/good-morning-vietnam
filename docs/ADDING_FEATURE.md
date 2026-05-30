@@ -1,96 +1,387 @@
-# Adding A Feature
+# Adding A Feature — Step By Step
 
-Use this checklist when creating a new feature. Start small, then split only
-when complexity makes the boundary useful.
+The working reference is `lib/features/template/`. Read it before writing a
+new feature. Every step below maps to a real file in that folder.
 
-## 1. Create The Feature Folder
+---
 
-```text
-lib/features/feature_name/
-  data/
-  application/
-    use_cases/
-  domain/
-  presentation/
-    widgets/
+## Step 1 — Decide: does it need a custom repository?
+
+| Situation | What to do |
+|---|---|
+| Data lives in local Hive storage, nothing custom needed | Use `localRepository<T>(...)` — one line, no subclass |
+| Need a custom Hive query, sort, or extra stream method | Extend `HiveLocalRepository<T>` |
+| Data comes from a remote API or platform service | Implement `CrudRepository<T, String>` manually |
+
+Jump to Step 2 regardless.
+
+---
+
+## Step 2 — Create the entity in `domain/`
+
+One plain Dart class. No framework imports.
+
+```dart
+// lib/features/orders/domain/order.dart
+class Order {
+  const Order({this.id = '', required this.title, this.completedAt});
+
+  final String id;
+  final String title;
+  final DateTime? completedAt;
+
+  bool get isComplete => completedAt != null;
+}
 ```
 
-Use package imports. Keep names boring and searchable:
+Put enums that belong to this entity here too
+(`lib/features/orders/domain/order_status.dart`).
 
-- `feature_name_repository.dart` (one per aggregate when the feature grows)
-- `feature_name_providers.dart` (the single home for the feature's providers)
-- `create_feature_name_use_case.dart` / `calculate_feature_name_use_case.dart`
-- `feature_name_formatters.dart`
-- `feature_name_mappers.dart`
-- `feature_name_page.dart`
+---
 
-## 2. Put Responsibilities In The Right Place
+## Step 3 — Create the data layer in `data/`
 
-- Put business concepts, enums, and derived values in `domain/`. No providers.
-- Put repository contracts, fake implementations, DTO mapping, SDK calls, API
-  calls, parsing, cache access, and local persistence in `data/`. Repositories
-  expose reactive `watch*` streams plus CRUD. No providers in `data/`.
-- Put the feature's providers in `application/`, split into small per-concern
-  files (e.g. `trips_provider.dart`, `active_trip_provider.dart`,
-  `trip_account_form_provider.dart`) — the DI/repository providers, the reactive
-  data providers, derived-value providers, and one write notifier per aggregate.
-  Prefer many small per-aggregate features over one big one. A feature owns its
-  model and may import another feature's model/providers when it needs them.
-- Put feature-specific use cases in `application/use_cases/` as plain classes —
-  validation, cross-repository orchestration, or derived calculations only.
-  Never give a use case its own provider, and never write a use case that only
-  forwards one repository call. Reads with no logic come straight from a data
-  provider over the repository stream.
-- Put pages, formatter functions, mapper functions, and feature-only widgets in
-  `presentation/`.
-- Move a widget to `shared/widgets/` only after a second feature needs it.
-- Add app-wide primitives to `core/` only when they are stable and feature-free.
+### Fast path — one-liner provider
 
-## 3. Keep Data Flow Explicit
+The whole data layer is one declaration. Serialization is three inline
+functions — there is no separate codec class to write.
 
-- Repositories return `Result<T, Failure>` and expose `watch*` streams.
-- Data providers return repository streams; reads need no use case.
-- Use cases (plain classes) hold validation / orchestration / calculation and
-  return `Result<T, Failure>`.
-- A view provider assembles a screen's data into a plain record (no summary
-  class), throwing failures so the page can render `AsyncValue<T>`.
-- Notifiers unwrap `Result<T, Failure>` into `AsyncValue<T>` for their own
-  loading/error; writes re-emit through the streams, so no manual invalidation.
-- Pages render `AsyncValue<T>` through `AppAsyncValueView<T>` when the whole
-  screen depends on async state.
-- Widgets watch providers and send intent to notifiers. They do not call
-  repositories, APIs, databases, SDKs, or platform services directly.
+```dart
+// lib/features/orders/data/order_repository.dart
+import 'package:flutter_foundation_kit/core/data/data.dart';
+import 'package:flutter_foundation_kit/features/orders/domain/order.dart';
 
-## 4. Wire Routing
-
-- Add or update the path in `AppRoutes`.
-- Add the route in `appRouterProvider`.
-- Import the feature page from its presentation path.
-- Pass IDs/slugs through routes; load data through controller/use case state.
-
-## 5. Add Tests
-
-Mirror the feature under `test/features/feature_name/`.
-
-- Test domain derived values and edge cases.
-- Test use cases around repository success and failure paths when they contain
-  behavior beyond simple forwarding.
-- Test controller state transitions and bounds.
-- Add a widget test for important UI flows.
-- Use fakes for simple dependencies and mocks for interaction-heavy boundaries.
-
-## 6. Run The Baseline
-
-```sh
-make check
+final orderRepositoryProvider = localRepository<Order>(
+  box: 'orders',
+  id: (order) => order.id,
+  toJson: (order) => {
+    'id': order.id,
+    'title': order.title,
+    'completedAt': order.completedAt?.toIso8601String(),
+  },
+  fromJson: (json) => Order(
+    id: json['id'] as String,
+    title: json['title'] as String,
+    completedAt: json['completedAt'] == null
+        ? null
+        : DateTime.parse(json['completedAt'] as String),
+  ),
+  sort: (a, b) => a.title.compareTo(b.title),
+);
 ```
 
-Or run the same steps manually:
+`localRepository` returns the `CrudRepository<Order, String>` surface, so the
+controller depends on the interface and tests can override the provider with a
+lightweight fake (no Hive box needed).
 
-```sh
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-dart format .
-flutter analyze
-flutter test
+### Custom repository — when you need extra methods
+
+Same three functions, now on a subclass that adds a query beyond plain CRUD.
+
+```dart
+abstract interface class OrderRepository
+    implements CrudRepository<Order, String> {
+  Stream<int> watchCompletedCount();
+}
+
+class HiveOrderRepository extends HiveLocalRepository<Order>
+    implements OrderRepository {
+  HiveOrderRepository()
+      : super.lazy(
+          openBox: () => openLocalHiveBox('orders'),
+          id: (order) => order.id,
+          toJson: (order) => {
+            'id': order.id,
+            'title': order.title,
+            'completedAt': order.completedAt?.toIso8601String(),
+          },
+          fromJson: (json) => Order(
+            id: json['id'] as String,
+            title: json['title'] as String,
+            completedAt: json['completedAt'] == null
+                ? null
+                : DateTime.parse(json['completedAt'] as String),
+          ),
+        );
+
+  @override
+  Stream<int> watchCompletedCount() =>
+      watchAll().map((list) => list.where((o) => o.isComplete).length);
+}
+
+@Riverpod(keepAlive: true)
+OrderRepository orderRepository(OrderRepositoryRef ref) =>
+    HiveOrderRepository();
 ```
+
+---
+
+## Step 4 — Create the controller in `application/`
+
+Mix in `LocalCrudNotifier<T>`. `build()` is always `watchAll()`.
+
+```dart
+// lib/features/orders/application/orders_controller.dart
+@riverpod
+class OrdersController extends _$OrdersController
+    with LocalCrudNotifier<Order> {
+  @override
+  CrudRepository<Order, String> get repository =>
+      ref.read(orderRepositoryProvider);
+
+  @override
+  Stream<List<Order>> build() => watchAll();
+
+  // Validation / normalisation — runs before every create.
+  @override
+  Future<Result<Order, Failure>> beforeCreate(Order draft) async {
+    final title = draft.title.trim();
+    if (title.isEmpty) {
+      return const Err(ValidationFailure('Enter an order title.'));
+    }
+    // Stamp a unique id (the template uses the same microsecond strategy).
+    return Ok(Order(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      title: title,
+      completedAt: draft.completedAt,
+    ));
+  }
+
+  // Side effects / rollback — runs after every create, success or failure.
+  // Override afterUpdate / afterDelete the same way when needed.
+  @override
+  Future<void> afterCreate(Order entity, Result<Order, Failure> result) async {
+    if (result case Ok()) {
+      // e.g. send a notification, write to a second repo, etc.
+    }
+  }
+}
+```
+
+**Hooks have access to `ref`** because the controller class extends a Riverpod
+notifier. Read any provider in a hook — other repositories, services, loggers.
+
+**You do not need a use case** unless the same multi-step logic must run from
+two or more controllers.
+
+---
+
+## Step 5 — Create the page in `presentation/`
+
+- Use `ConsumerStatefulWidget` when the page has local form state (pickers,
+  text fields, counters). Business state stays in the controller.
+- Render the async list with `AppAsyncValueView`.
+- Call `controller.create` / `update` / `delete` and switch on the `Result`.
+
+```dart
+// lib/features/orders/presentation/orders_page.dart
+class OrdersPage extends ConsumerStatefulWidget {
+  const OrdersPage({super.key});
+  @override
+  ConsumerState<OrdersPage> createState() => _OrdersPageState();
+}
+
+class _OrdersPageState extends ConsumerState<OrdersPage> {
+  final _titleController = TextEditingController();
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncOrders = ref.watch(ordersControllerProvider);
+    final controller = ref.read(ordersControllerProvider.notifier);
+
+    return AppAsyncValueView(
+      value: asyncOrders,
+      onRetry: () => ref.invalidate(ordersControllerProvider),
+      data: (orders) => AppSliverPage(
+        title: 'Orders',
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(AppSpacing.page),
+            sliver: SliverList.list(
+              children: [
+                AppListSection(
+                  children: [
+                    for (final order in orders)
+                      AppTile(
+                        title: order.title,
+                        subtitle: order.isComplete ? 'Done' : null,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+        bottomNavigationBar: AppBottomActionBar(
+          child: AppButton.primary(
+            label: 'Add order',
+            expanded: true,
+            onPressed: () async {
+              final result = await controller.create(
+                Order(title: _titleController.text),
+              );
+              if (!context.mounted) return;
+              switch (result) {
+                case Ok():
+                  AppSnackBars.success(context, 'Order added.');
+                case Err(failure: ValidationFailure(:final message)):
+                  AppSnackBars.error(context, message);
+                case Err():
+                  AppSnackBars.error(context, 'Something went wrong.');
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+Add `feature_name_formatters.dart` for display strings and
+`feature_name_mappers.dart` for enum → icon/color mappings.
+
+---
+
+## Step 6 — Wire routing
+
+```dart
+// lib/core/routing/app_routes.dart
+static const String orders = '/orders';
+
+// lib/core/routing/app_router.dart — add to the relevant branch or as a new GoRoute
+GoRoute(path: AppRoutes.orders, builder: (_, __) => const OrdersPage()),
+```
+
+---
+
+## Step 7 — Add tests
+
+Mirror under `test/features/feature_name/`.
+
+```
+test/features/orders/
+  domain/order_test.dart          — derived values, edge cases
+  application/orders_controller_test.dart — beforeCreate validation, create/delete
+```
+
+Controller tests: inject a `_FakeRepository` via `ProviderContainer(overrides: [...])`.
+Domain tests: plain Dart, no framework.
+
+---
+
+## Decision tree for less common situations
+
+### "My operation isn't a create / update / delete"
+
+Hooks are lifecycle callbacks for the three CRUD writes — they fire only when
+you call the mixin's `create` / `update` / `delete`. A query, a calculation, a
+bulk command, a sync — anything else — never touches a hook. Write it as an
+explicit use case and call it directly.
+
+```dart
+// application/use_cases/monthly_revenue_use_case.dart
+class MonthlyRevenueUseCase {
+  const MonthlyRevenueUseCase(this._repository);
+  final CrudRepository<ProjectReceipt, String> _repository;
+
+  Future<Result<int, Failure>> call(DateTime month) async {
+    final receipts = await _repository.watchAll().first;
+    final total = receipts
+        .where((r) => r.confirmedAt?.month == month.month)
+        .fold<int>(0, (sum, r) => sum + r.total);
+    return Ok(total);
+  }
+}
+
+@riverpod
+MonthlyRevenueUseCase monthlyRevenueUseCase(MonthlyRevenueUseCaseRef ref) =>
+    MonthlyRevenueUseCase(ref.read(templateRepositoryProvider));
+```
+
+Expose it as a plain method on the controller (or read the provider straight
+from the page); return the `Result` and let the page handle it:
+
+```dart
+class TemplateController extends _$TemplateController
+    with LocalCrudNotifier<ProjectReceipt> {
+  // ...repository getter + build() as usual...
+
+  Future<Result<int, Failure>> revenueThisMonth() =>
+      ref.read(monthlyRevenueUseCaseProvider)(DateTime.now());
+}
+```
+
+Two notes:
+
+- **No `mutate` here.** A `LocalCrudNotifier` controller is a `StreamNotifier`
+  (its state is the watched list), so there is no `mutate`. Return the `Result`;
+  if the operation wrote to the repository, the watched list re-emits on its own.
+- **To bypass hooks on a write,** call the raw repository (`repository.create(...)`)
+  instead of the mixin's `create(...)`. The mixin method runs `beforeCreate`; the
+  repository method does not — useful for a bulk import where per-row validation
+  should not fire.
+
+### "My operation touches two repositories"
+
+Override `beforeCreate` to write to the first repository and `afterCreate` to
+roll back that write when `result` is `Err`. Both hooks have `ref`.
+
+```dart
+@override
+Future<Result<Order, Failure>> beforeCreate(Order draft) async {
+  // Reserve the slot first; abort the create if reservation fails.
+  final reserved = await ref.read(slotRepositoryProvider).reserve(draft.slotId);
+  if (reserved case Err(failure: final failure)) return Err(failure);
+  return Ok(draft);
+}
+
+@override
+Future<void> afterCreate(Order entity, Result<Order, Failure> result) async {
+  // The order write failed after we reserved the slot — release it.
+  if (result case Err()) {
+    await ref.read(slotRepositoryProvider).release(entity.slotId);
+  }
+}
+```
+
+### "The same logic runs from two controllers"
+
+Extract a use case in `application/use_cases/`. The use case takes a
+repository interface (never a concrete class) via its constructor.
+
+```dart
+class CompleteOrderUseCase {
+  const CompleteOrderUseCase(this._orders, this._notifications);
+  final OrderRepository _orders;
+  final NotificationService _notifications;
+
+  Future<Result<Order, Failure>> call(String id) async { ... }
+}
+
+@Riverpod(keepAlive: true)
+CompleteOrderUseCase completeOrderUseCase(CompleteOrderUseCaseRef ref) =>
+    CompleteOrderUseCase(
+      ref.watch(orderRepositoryProvider),
+      ref.watch(notificationServiceProvider),
+    );
+```
+
+Both controllers then read `completeOrderUseCaseProvider`.
+
+### "The controller doesn't back a list — it's a write-only form"
+
+Use `MutationNotifier<MyState>` on an `AsyncNotifier<MyState>` instead of
+`LocalCrudNotifier`. The `mutate` helper handles loading → data/error state.
+
+---
+
+## Checklist before opening a PR
+
+See the **Review Checklist** at the end of `docs/ARCHITECTURE.md`.

@@ -6,6 +6,7 @@ import 'package:flutter_foundation_kit/core/result/result.dart';
 String failureMessage(Failure failure) => switch (failure) {
   NetworkFailure() => 'Check your connection and try again.',
   NotFoundFailure() => 'We could not find that item.',
+  ConflictFailure() => 'That item already exists.',
   UnauthorizedFailure() => 'Please sign in and try again.',
   ValidationFailure(:final message) => message,
   UnknownFailure() => 'Something went wrong. Please try again.',

@@ -2,70 +2,70 @@
 
 This file is the entrypoint for AI coding agents (Claude Code, Codex, Cursor,
 Copilot) working in this repository. Read it first. Then follow
-`docs/ARCHITECTURE.md`, `docs/ADDING_FEATURE.md`, and `docs/REVIEW_CHECKLIST.md`.
+`docs/ARCHITECTURE.md` (which ends with the review checklist) and
+`docs/ADDING_FEATURE.md`.
 
-The working reference for a single feature is `lib/features/template/`. For a
-real domain split into small per-aggregate features with per-concern providers,
-see `lib/features/trips`, `lib/features/accounts`, and `lib/features/transactions`
-(the trip dashboard in `features/trips/presentation` shows a cross-cutting screen
-that only consumes other features' providers). Copy their shape.
+The working reference for every framework pattern is `lib/features/template/`.
+Copy its shape before inventing a new one.
 
 ## The Two Rules You Will Most Often Break
 
-### 1. No private helpers in page files
+### 1. Pages compose shared widgets inline — no feature widget classes
 
-**No private helpers in page files.** No `_buildHeader()` methods returning
-`Widget`. No private `_SectionCard` widget classes hiding inside a page file.
-No private `_formatX` / `_iconFor` / `_sortBy` functions tucked into
-`presentation/`.
+**There is exactly one widget layer: `lib/shared/widgets/`.** A page builds its
+whole UI by composing those widgets directly in `build`. Do not split a page
+into feature "section" widgets (`MyOverviewSection`, `MyHeaderCard`), do not
+create a `presentation/widgets/` folder, and do not add `_buildHeader()` methods
+or private `_SectionCard` classes. Write the tree inline — a long `build` is
+fine (there is no line limit).
 
-If it's worth naming, it's worth a file. If it isn't worth a file, inline it.
+If a piece of UI is genuinely reused across features, promote it to a **new
+shared widget** in `lib/shared/widgets/` and export it from `widgets.dart` — not
+to a feature-local widget. One layer, no in-between.
 
-If you find yourself typing `Widget _build`, stop. That is the smell.
+If you find yourself typing `Widget _build` or creating a `class _Something
+extends StatelessWidget`, stop. That is the smell.
 
-### 2. Providers live in `application/`; use cases hold the logic
+### 2. Controllers reach data in exactly one of two ways
 
-Split a domain into small features by aggregate — `trips`, `accounts`,
-`transactions` — each owning its model (`domain/`), repository (`data/`), and
-providers (`application/`). A feature owns its model; cross-feature imports are
-fine when a feature genuinely needs another's data (e.g. `accounts` reads a
-`Trip`).
+A controller never hand-rolls repository calls or business logic inline in its
+methods. It reaches data through one of two sanctioned paths:
 
-**Providers live only in `application/`**, split into small per-concern files —
-`trips_provider.dart`, `active_trip_provider.dart`, `trip_accounts_provider.dart`,
-`trip_account_form_provider.dart`, etc. Never declare a provider in `data/` or
-`domain/`. Each provider either exposes repository data (reads, over `watch*`
-streams) or derives a value through a use case; writes go through one notifier
-per aggregate. There is no manual provider invalidation — streams fan writes out.
+- **Plain CRUD + hooks → the store.** Define the data layer in one line with
+  `localRepository<T>(...)` (no interface, no impl, no `main()` wiring), then mix
+  `LocalCrudNotifier<T>` into the controller and expose the provider. You get
+  `watchAll` / `create` / `update` / `delete` for free, returning `Result`.
+  Business rules go in hooks — `beforeCreate` / `beforeUpdate` to validate or
+  normalise, `afterCreate` / `afterUpdate` / `afterDelete` to run side effects or
+  roll back a write that failed. Hooks have access to `ref`, so cross-repository
+  reads and compensating writes are fine here. No use case file needed.
+- **Shared orchestration → a use case.** Only reach for a use case when the same
+  multi-step logic must run from two or more controllers. A single controller's
+  multi-repository operation belongs in its hooks.
 
-**A page only consumes providers; it never invents its own.** A cross-cutting
-screen (e.g. the trip dashboard) watches the providers other features already
-expose and composes them — it does not create dashboard-specific providers or
-"summary" aggregation classes.
+The smell to avoid is unchanged: a controller importing a concrete repository
+*implementation* (`HiveFooRepository`) or embedding multi-step logic in a
+method. Depending on a `localRepository` *provider* via the store is fine.
 
-**Data manipulation lives in use cases** — plain classes under
-`application/use_cases/` that validate, orchestrate multiple repositories, or
-derive calculations. A use case is a plain class; never wrap one in its own
-provider, and never create a use case that only forwards a single repository
-call.
+## Decision Flow Before Writing Anything In A Page
 
-## Decision Flow Before Writing Anything Private
-
-Before writing `_anything` inside a page file, answer in order:
+Before adding anything to a page, answer in order:
 
 1. **String for display?** → `presentation/<feature>_formatters.dart`.
 2. **Enum → icon / color / label?** → `presentation/<feature>_mappers.dart`.
-3. **Filtering / sorting / math on domain data?** → a method on the domain
-   model, or a use case when it spans entities or needs a repository.
-4. **A chunk of UI bigger than ~15 lines, or used twice?** → a public widget
-   in `presentation/widgets/<name>.dart`.
-5. **Used by a second feature?** → move to `lib/shared/widgets/`.
-6. **None of the above and under ~15 lines?** → inline it in `build`. Do not
-   wrap it in `_buildX()` or a private widget class just to "tidy up".
+3. **Filtering / sorting / math on domain data?** → a getter on state, or a
+   method on the domain model.
+4. **A piece of UI?** → compose shared widgets from `lib/shared/widgets/`
+   inline in the page's `build`. If the widget you need does not exist, add it
+   to `lib/shared/widgets/` and reuse it — never a feature widget class.
+5. **Local UI state (selection, toggles)?** → make the page a
+   `StatefulWidget` / `ConsumerStatefulWidget`. Business state stays in the
+   controller.
 
 ## Stop And Ask The User Before
 
-- Adding a new package to `pubspec.yaml`.
+- Adding a new package to `pubspec.yaml` unless the user explicitly asks for a
+  framework-level primitive that needs it.
 - Removing or downgrading a dependency.
 - Adding a new folder under `lib/core/` or a new top-level folder under `lib/`.
 - Changing an existing public route path in `AppRoutes`.
@@ -75,22 +75,70 @@ Before writing `_anything` inside a page file, answer in order:
 
 ## Baseline Commands
 
-Run before handing off a change:
-
-```sh
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-dart format .
-flutter analyze
-flutter test
-```
+Run the full baseline before handing off a change — the commands live in
+`README.md` › **Baseline Commands** (`flutter pub get`, `build_runner`,
+`dart format .`, `flutter analyze`, `flutter test`), or just `make check`.
 
 If any step fails, fix the cause. Do not skip steps, do not pass `--no-verify`,
 do not silence lints to make the diff pass.
 
+## Shared Widget Catalog
+
+**Before you build any UI, check this list. If a widget here fits, use it — do
+not hand-roll your own.** Import the whole kit with one line:
+
+```dart
+import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
+```
+
+These widgets are intentionally opinionated. They take *content* (titles, data,
+callbacks) and bake in *all* styling from the theme. There are no `padding`,
+`borderRadius`, `color`, or `style` knobs — if you need a different look, that is
+a theme/token change (`lib/core/theme/`) or a new named widget, never a new
+parameter. Keep them that way.
+
+Read colors via `context.colors` (an `AppPalette` that flips between light and
+dark) and spacing/sizes via `AppSpacing` / `AppSizes` — never hardcode a
+`Color(...)` or a magic number. Theme mode is driven by `themeModeProvider`.
+
+| Widget | Use it for |
+| --- | --- |
+| `AppSliverPage` | The page scaffold: collapsing title/subtitle, leading, actions, slivers, bottom bar. Every screen starts here. |
+| `AppAsyncValueView<T>` | Render a Riverpod `AsyncValue<T>` — loading / error / retry / data — instead of hand-rolling branches. |
+| `AppCard` | The rounded surface primitive with soft elevation. Use it instead of a hand-rolled `Container` decoration. Optional `onTap`. |
+| `AppButton` | `AppButton.primary/.secondary/.text/.danger(...)` with built-in `loading` spinner, optional `icon`, and `expanded` for full width. Use instead of raw `FilledButton`/`OutlinedButton`. |
+| `AppListSection` + `AppTile` | iOS grouped list: `AppListSection(header:, children: [AppTile(...)])`. `AppTile` is the row (leading / title / subtitle / trailing, auto chevron when tappable). |
+| `AppBottomActionBar` | The pinned bottom bar surface that wraps a primary action (pass a `child`). |
+| `AppSnackBars` | `AppSnackBars.success/.error/.info(context, msg)` transient toasts — never call `ScaffoldMessenger` directly. |
+| `AppDialog` | `AppDialog.confirm(context, …) → Future<bool>` and `AppDialog.alert(...)`. Use instead of `showDialog`. |
+| `AppBottomSheet` / `AppActionSheet` | `AppBottomSheet.show(context, child:)` for custom sheets; `AppActionSheet.show(context, actions: [AppAction(...)])` for an iOS action list. Use instead of `showModalBottomSheet`. |
+| `AppBanner` | Persistent inline message strip (`info`/`success`/`warning`/`error`), optional `onClose`. Use for status that should stay on screen. |
+| `AppLoadingOverlay` | A blocking scrim + spinner; drop as the last child of a `Stack` while a blocking op runs. |
+| `AppSkeleton` | Animated shimmer placeholder; compose several to mimic the loading layout. |
+| `AppEmptyState` | Empty/zero-data screens: icon + title + description + optional action. |
+| `AppSectionHeader` | Section heading: optional eyebrow, title, body, trailing. |
+| `AppKeyValueRow` | A label/value line; pass `emphasized: true` for a total/summary row. |
+| `AppDropdown<T>` | Themed dropdown built from `AppDropdownOption<T>`s. |
+| `AppCounterStepper` | Label + decrement/value/increment stepper. |
+| `AppBackButton` | The standard back button (`context.pop`). |
+| `AppShell` | Bottom-nav shell for `StatefulNavigationShell` branches. |
+| `AppDonutChart` / `AppRoundedBarChart` | Categorical charts. Feed `List<AppChartDatum>` (label + value; `detail`/`color` optional, colors auto-assigned). |
+| `AppTrendChart` | Time-series line chart. Feed `List<AppTrendPoint>` (date + value). |
+| `app_formatters.dart` | `formatCurrency`, `formatCents`, `formatShortDate`, `formatPercent`, etc. Format here, not inline. |
+
+If a genuinely reusable widget is missing, add it to `lib/shared/widgets/` and
+export it from `widgets.dart` — do not inline a one-off in a page.
+
 ## Where To Look
 
-- `docs/ARCHITECTURE.md` — folder shape, dependency direction, do/don't examples.
+- `docs/ARCHITECTURE.md` — folder shape, dependency direction, do/don't
+  examples, and the review checklist to run before a PR.
 - `docs/ADDING_FEATURE.md` — checklist for adding a new feature.
-- `docs/REVIEW_CHECKLIST.md` — what to verify before opening a PR.
-- `lib/features/template/` — working reference feature.
+- `lib/features/template/` — working reference feature (state, async, navigation).
+- `lib/features/gallery/` — live showcase of every shared widget.
+- `lib/core/application/` — framework helpers for mutation state and result
+  unwrapping.
+- `lib/core/data/` — local data framework primitives for Hive-backed
+  repositories.
+- `lib/core/routing/app_router.dart` — tab shell + pushed detail route with a
+  slide transition (navigation reference).

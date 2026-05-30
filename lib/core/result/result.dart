@@ -28,6 +28,12 @@ final class NotFoundFailure extends Failure {
   const NotFoundFailure();
 }
 
+/// Raised when a write would collide with an entity that already exists,
+/// e.g. creating a record whose id is already present.
+final class ConflictFailure extends Failure {
+  const ConflictFailure();
+}
+
 final class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure();
 }

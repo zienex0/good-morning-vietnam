@@ -1,8 +1,8 @@
 # Architecture Guardrails
 
-This kit is intentionally small, but it is not patternless. The goal is to make
-new features easy to review, test, and move without turning the starter into a
-framework.
+This project is an opinionated Flutter application framework. The goal is to
+make new features easy to add, review, test, and manipulate by giving every app
+the same boring rails for data, state, routing, errors, and UI composition.
 
 The working reference for every rule below is `lib/features/template/`. When
 in doubt, copy its shape.
@@ -11,40 +11,113 @@ in doubt, copy its shape.
 
 Use a feature-first structure for product code:
 
-Split a domain into small features by aggregate (e.g. `trips`, `accounts`,
-`transactions`) rather than one large feature:
-
 ```text
 lib/
   core/
-    logging/  l10n/  result/  routing/  theme/
+    application/
+    data/
+    logging/
+    l10n/
+    result/
+    routing/
+    theme/
   shared/
     widgets/
   features/
-    trips/
-      data/        # trip_repository.dart (+ Hive impl), trip_id_generator.dart — no providers
-      domain/      # trip.dart, currencies.dart — pure models, no providers
+    feature_name/
       application/
-        trips_provider.dart           # DI + trips stream
-        active_trip_provider.dart     # active trip id + active trip
-        trip_form_provider.dart       # the trip write notifier
-        use_cases/                    # plain classes: validation / orchestration / math
-      presentation/  # trip_dashboard_page.dart (cross-cutting), formatters, widgets/
-    accounts/  …    # trip_accounts_provider, trip_account_details_provider, trip_account_form_provider
-    transactions/ … # transactions_provider, trip_spend_provider, transaction_form_provider
+      domain/
+      presentation/
 ```
 
-- `core/` is for app-wide primitives that should not know about features.
-- `shared/widgets/` is for reusable UI components, not feature-specific sections.
-- `features/*/data` owns one repository per aggregate, exposing reactive
-  `watch*` streams plus CRUD, and its own Hive box + id generator. No providers.
-- `features/*/domain` owns that feature's models and their derived values. No
-  providers. A feature owns its model; another feature may import it when needed.
-- `features/*/application` owns the feature's providers — split into small
-  per-concern files (not one god file) — and its use cases. Providers live here
-  and nowhere else.
-- `features/*/presentation` owns pages, formatters, presentation mappers, and
-  feature widgets. A cross-cutting page composes other features' providers.
+- `core/` is for app-wide framework primitives that should not know about
+  features.
+- `core/application/` owns app-wide application-state helpers such as mutation
+  runners and `Result` unwrap utilities.
+- `core/data/` owns repository capability contracts and local storage helpers.
+- `shared/widgets/` is the **single widget layer** — every reusable UI
+  component lives here. Features do not have their own `widgets/` folder.
+- `features/*/domain` owns business concepts and derived values.
+- `features/*/application` owns Riverpod state, intent methods, and side-effect
+  coordination.
+- `features/*/presentation` owns pages, formatters, and presentation mappers.
+  Pages compose `shared/widgets/` inline; there are no feature widget classes.
+
+## Local Data Framework
+
+Hive-backed repositories use `lib/core/data/` as their bread-and-butter local
+storage base:
+
+- Serialization is supplied as three inline functions — `id` (the entity's
+  storage key), `toJson`, and `fromJson` — passed straight to `localRepository`
+  or a `HiveLocalRepository` constructor. There is no separate codec class.
+- `HiveLocalRepository<T>` provides list, watch, fetch, create, update,
+  delete-by-id, and delete-by-predicate behavior.
+- `localRepository<T>(...)` returns the `CrudRepository<T, String>` surface, so
+  controllers depend on the interface and tests can fake it without a box.
+- Repository interfaces stay feature-specific. A feature can still expose
+  active selection, scoped reads, cascade deletes, or domain commands.
+- Validation and business rules live in `LocalCrudNotifier` hooks
+  (`beforeCreate` / `afterCreate` …); reach for a use case only when the same
+  orchestration must be shared across two or more controllers.
+
+### Do / Don't: Reuse Local Storage Mechanics
+
+**Don't** — every repository hand-rolls the same Hive loop:
+
+```dart
+final items = box.values.map(decode).toList()
+  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+yield* box.watch().asyncMap((_) => readAgain());
+```
+
+**Do (default)** — wire the whole repository in one line with `localRepository`.
+No interface, no impl, no box registration, no `main()` setup; the box opens
+lazily and `Hive.initFlutter()` runs once:
+
+```dart
+final projectRepositoryProvider = localRepository<Project>(
+  box: 'projects',
+  id: (project) => project.id,
+  toJson: (project) => {'id': project.id, 'name': project.name},
+  fromJson: (json) =>
+      Project(id: json['id'] as String, name: json['name'] as String),
+  sort: (a, b) => b.createdAt.compareTo(a.createdAt),
+);
+```
+
+Pair it with `LocalCrudNotifier<Project>` on the controller and the feature has
+no use-case files (see ADDING_FEATURE §0).
+
+**Do (only when you need extra queries)** — subclass `HiveLocalRepository`:
+
+```dart
+class HiveProjectRepository extends HiveLocalRepository<Project>
+    implements ProjectRepository {
+  HiveProjectRepository({required Box<String> projectsBox})
+    : super(
+        box: projectsBox,
+        id: (project) => project.id,
+        toJson: (project) => {'id': project.id, 'name': project.name},
+        fromJson: (json) =>
+            Project(id: json['id'] as String, name: json['name'] as String),
+        sort: (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
+
+  @override
+  Future<Result<List<Project>, Failure>> listProjects() => list();
+}
+```
+
+`HiveLocalRepository` contract worth knowing:
+
+- One-shot reads (`list`, `fetchById`) return `Result<T, Failure>`. Watch streams
+  (`watch`, `watchAll`) stay `Stream<List<T>>` and surface failures as stream
+  errors so Riverpod converts them to `AsyncError` — do not wrap stream payloads
+  in `Result`.
+- `create` is not an upsert: it returns `Err(ConflictFailure())` when the id
+  already exists, mirroring how `update` returns `Err(NotFoundFailure())` when it
+  does not. Generate a new id (or call `update`) instead of relying on overwrite.
 
 ## Dependency Direction
 
@@ -55,10 +128,8 @@ Dependencies should point toward stable concepts:
   primitives.
 - Repositories/services hide APIs, databases, SDKs, caches, and parsing.
 - Domain models do not import Flutter widgets, colors, routing, or context.
-- Tightly related features in the same domain (trips / accounts / transactions)
-  may import each other's models and providers — e.g. `accounts` reads a `Trip`,
-  a notifier composes another feature's repository. Keep unrelated features
-  decoupled, and don't reach into another feature's `presentation/`.
+- Feature-to-feature imports should be rare. Extract shared contracts into a
+  neutral place when collaboration becomes real.
 
 ### Do / Don't: Keep Domain Flutter-Free
 
@@ -90,55 +161,44 @@ IconData iconFor(ProjectTrack t) => switch (t) {
 
 ## Page Responsibility
 
-Pages are orchestration only. A page may compose widgets, watch state, own
-ephemeral UI controllers, and dispatch user intent.
+Pages own the whole screen. A page composes `shared/widgets/` inline, watches
+state, holds ephemeral UI state, and dispatches user intent.
 
 Do not put filtering, sorting, lookup helpers, parsing, formatting, validation,
-business math, enum icon/color/label mappings, or large section widgets in a
-page file. Put those responsibilities in domain models, controllers, formatter
-files, mapper files, or extracted widgets.
+business math, or enum icon/color/label mappings in a page file. Put those
+responsibilities in domain models, controllers, formatter files, or mapper
+files. *Layout*, however, belongs in the page — write the widget tree inline.
 
-Keep page files under 500 lines. Treat a page approaching that size as a prompt
-to extract sections before adding more behavior.
+There is no page-size limit. A page that composes many shared widgets will be
+long, and that is fine — do not break it into feature "section" widgets or
+`_buildX()` helpers to shorten it. If a chunk of UI is reused across features,
+promote it to a new `shared/widgets/` widget instead.
 
 ### Do / Don't: Page Holds Orchestration, Not Logic
 
-**Don't** — sorting, filtering, and math inlined in `build`:
+**Don't** — filtering and math inlined in `build`:
 
 ```dart
-class TemplateHomePage extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final receipts = ref.watch(templateControllerProvider).receipts;
-    final visible = receipts
-        .where((r) => r.track == ProjectTrack.active)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final total = visible.fold<double>(0, (s, r) => s + r.amount);
-    return Text('Total: \$${total.toStringAsFixed(2)}');
-  }
-}
+final receipts = ref.watch(templateControllerProvider).valueOrNull ?? [];
+final total = receipts
+    .where((r) => r.confirmedAt != null)
+    .fold<int>(0, (sum, r) => sum + r.total); // ← business math in build
+return Text('\$$total');
 ```
 
-**Do** — state exposes the derived value, formatter renders the string:
+**Do** — a pure helper owns the aggregate; the page just renders:
 
 ```dart
-class TemplateHomePage extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(templateControllerProvider);
-    return Text(formatCurrency(state.activeTotal));
-  }
-}
-// Sorting + summing live on the state or a domain getter.
-// formatCurrency lives in template_formatters.dart.
+final receipts = ref.watch(templateControllerProvider).valueOrNull ?? [];
+return Text(formatTemplateMoney(confirmedTotal(receipts)));
+// confirmedTotal(...) is a pure function in domain;
+// formatTemplateMoney lives in template_formatters.dart.
 ```
 
-## Reusable Code: No `_buildX`, No Private Widgets, No Private Helpers
+## One Widget Layer: Compose Shared Widgets Inline
 
-**If it's worth naming, it's worth a file. If it isn't worth a file, inline it.**
-
-Three concrete forms this rule takes:
+**There is exactly one widget layer, `lib/shared/widgets/`. Pages compose it
+inline. No feature widget classes, no `_buildX` methods, no private helpers.**
 
 ### Do / Don't: No `_buildSection()` Methods Returning `Widget`
 
@@ -161,45 +221,37 @@ class _TemplateHomePageState extends ConsumerState<TemplateHomePage> {
 }
 ```
 
-These can't be `const`, can't be tested in isolation, can't be reused, and
-balloon the page file.
-
-**Do** — one widget per file under `presentation/widgets/`:
-
-```dart
-// presentation/widgets/template_header.dart
-class TemplateHeader extends StatelessWidget { ... }
-
-// presentation/widgets/template_receipt_list.dart
-class TemplateReceiptList extends ConsumerWidget { ... }
-
-// presentation/template_home_page.dart
-Column(children: const [
-  TemplateHeader(),
-  TemplateReceiptList(),
-  TemplateTotalsFooter(),
-])
-```
-
-### Do / Don't: No Private Widget Classes Inside Page Files
-
-**Don't** — invisible to every other file, impossible to reuse without
-copy-paste:
+**Do** — write the tree inline from shared widgets. A long `build` is fine:
 
 ```dart
 // presentation/template_home_page.dart
-class TemplateHomePage extends ConsumerWidget { ... }
-
-class _SectionCard extends StatelessWidget { ... }
-class _ReceiptTile  extends StatelessWidget { ... }
-class _EmptyState   extends StatelessWidget { ... }
+return AppSliverPage(
+  title: context.l10n.appName,
+  slivers: [
+    SliverList.list(
+      children: [
+        AppSectionHeader(title: 'Receipts'),
+        AppListSection(children: [for (final r in receipts) AppTile(...)]),
+        AppCard(child: AppKeyValueRow(label: 'Total', value: total)),
+      ],
+    ),
+  ],
+);
 ```
 
-**Do** — public name, own file, in `presentation/widgets/`. The day a second
-page wants `EmptyState`, you move it to `shared/widgets/`, you don't copy it.
+### Do / Don't: No Feature Widget Classes
 
-`_PrivateWidget` is the worst of both worlds: too big to inline, too hidden
-to reuse.
+**Don't** — a feature "section" widget, whether private in the page file or in
+its own `presentation/widgets/` file:
+
+```dart
+class _SectionCard extends StatelessWidget { ... }      // hidden in page
+class TemplateReceiptList extends StatelessWidget { ... } // presentation/widgets/
+```
+
+**Do** — compose shared widgets inline. If the UI is genuinely reused across
+features, add a **new shared widget** to `lib/shared/widgets/` and export it
+from `widgets.dart`. There is no feature-local widget tier.
 
 ### Do / Don't: No Private `_format` / `_iconFor` / `_sort` Helpers
 
@@ -224,42 +276,32 @@ String formatAmount(double v) => '\$${v.toStringAsFixed(2)}';
 // presentation/template_mappers.dart         — enum -> icon/color/label
 IconData iconForTrack(ProjectTrack t) => switch (t) { ... };
 
-// application/template_controller.dart       — derived state
-List<ProjectReceipt> get receiptsByDate =>
-    [...state.receipts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+// domain/project_receipt.dart                — derived value on the model
+int get total => taxableSubtotal + tax;
 ```
 
 ### The Decision Flow
 
-Before writing `_anything` inside a page file, answer in order:
+Before adding anything to a page, answer in order:
 
 1. **String for display?** → `presentation/<feature>_formatters.dart`.
 2. **Enum → icon / color / label?** → `presentation/<feature>_mappers.dart`.
 3. **Filtering / sorting / math on domain data?** → getter on state, or a
    method on the domain model.
-4. **UI chunk bigger than ~15 lines, or used twice?** → public widget in
-   `presentation/widgets/<name>.dart`.
-5. **Used by a second feature?** → `lib/shared/widgets/`.
-6. **None of the above and under ~15 lines?** → inline it. Do not wrap it in
-   `_buildX()` or a private widget class.
+4. **A piece of UI?** → compose shared widgets inline. If the widget is
+   missing, add it to `lib/shared/widgets/` and reuse it — never a feature
+   widget class.
+5. **Local UI state?** → make the page a `StatefulWidget` /
+   `ConsumerStatefulWidget`. Business state stays in the controller.
 
 ## State And Data Flow
 
-- A feature's providers live in `application/`, split into small per-concern
-  files (`trips_provider.dart`, `active_trip_provider.dart`,
-  `trip_account_form_provider.dart`, …) — never one god file, never in
-  `data/`/`domain/`.
-- Reads flow from repository `watch*` streams through data providers, so a write
-  fans out to every listener automatically. There is no manual invalidation.
-- Derived values are their own providers, owned by the feature that owns the
-  data (spend metrics in `transactions`, total balance in `accounts`), each a
-  thin wrapper over a use case.
-- Writes go through notifiers (one per aggregate) that expose intent methods:
-  `createTrip`, `editAccount`, `createExpense`.
-- A cross-cutting screen composes the providers other features already expose;
-  it never invents screen-specific providers or "summary" aggregation classes.
-  A per-feature view (e.g. account detail) may assemble its data into a plain
-  record inside a feature provider.
+- Use Riverpod consistently for app state.
+- Widgets send intent: `create`, `update`, `delete`, `refresh`.
+- Controllers expose app state and intent-level methods.
+- Repository providers are dependency wiring. Stream/Future providers expose
+  read state. Notifiers/controllers own imperative user intent and transient
+  mutation state.
 - Business state lives outside widgets.
 - Ephemeral UI state may stay in widgets when it is truly visual: focus,
   text controllers, hover, scroll position, tab selection.
@@ -268,115 +310,167 @@ Before writing `_anything` inside a page file, answer in order:
 
 ### Do / Don't: Widgets Send Intent, Not Procedure
 
-**Don't** — widget reads state, computes the next value, mutates directly:
+**Don't** — widget enforces a business rule, then mutates:
 
 ```dart
 onPressed: () {
-  final controller = ref.read(templateControllerProvider.notifier);
-  final next = controller.state.seats + 1;
-  if (next <= 10) {
-    controller.state = controller.state.copyWith(seats: next);
+  if (draft.track == null) return; // business rule leaking into the page
+  ref.read(templateControllerProvider.notifier).create(draft);
+}
+```
+
+**Do** — widget names the intent; the rule lives in the controller's
+`beforeCreate` hook and comes back as a `Result`:
+
+```dart
+onPressed: () async {
+  final result =
+      await ref.read(templateControllerProvider.notifier).create(draft);
+  if (result case Err(failure: ValidationFailure(:final message))) {
+    AppSnackBars.error(context, message);
   }
 }
 ```
 
-**Do** — widget names the intent; bounds and `copyWith` live on the controller:
+## Controllers, Stores, And Use Cases
+
+The application layer has one default and two escape hatches. Start at the
+default and only move outward when the rule below forces you to:
+
+- **Default — the store.** `LocalCrudNotifier<T>` + `localRepository<T>` with
+  business rules in hooks. This covers plain CRUD *and* multi-repository
+  operations with rollback (see ADDING_FEATURE §0 and the hooks section of
+  `local_crud_notifier.dart`).
+- **Write-only controller — `MutationNotifier<T>`.** When there is no list to
+  watch (a form posting to a remote API).
+- **Use case — only for shared orchestration.** When the same multi-step logic
+  must run from two or more controllers.
+
+Use cases are for **orchestration**, not for wrapping every repository call:
+
+- Use cases name the intent: `load`, `submit`, `confirm`, `watch`, `sync`.
+- Use cases combine logic that needs to be reused across features; a single
+  controller's multi-repository operation belongs in its hooks, not a use case.
+- Use cases are exposed through small Riverpod providers in `application/`.
+  Controllers read those providers instead of constructing use cases or reaching
+  through a repository implementation directly.
+- Don't create a one-line pass-through use case just to have one. If it only
+  forwards a single repository call with no logic, use the store instead.
+
+### Controller Base: Store Or MutationNotifier
+
+**Plain CRUD + hooks → the store (default).** Mix `LocalCrudNotifier<T>` into the
+controller, point `repository` at a `localRepository` provider, and return
+`watchAll()` from `build()`. Create/update/delete/fetch come for free and return
+`Result`. Business rules live in hooks — `beforeCreate` / `beforeUpdate` to
+validate or normalise, `afterCreate` / `afterUpdate` / `afterDelete` to run side
+effects or roll back a failed write. Hooks have access to `ref`, so
+cross-repository reads and compensating writes belong here, not in a use case.
 
 ```dart
-onPressed: () =>
-    ref.read(templateControllerProvider.notifier).incrementSeats(),
-```
+class TemplateController extends _$TemplateController
+    with LocalCrudNotifier<ProjectReceipt> {
+  @override
+  CrudRepository<ProjectReceipt, String> get repository =>
+      ref.read(templateRepositoryProvider);
 
-## Use Cases
+  @override
+  Stream<List<ProjectReceipt>> build() => watchAll();
 
-Use cases are **plain classes** under `application/use_cases/` that hold data
-manipulation. They are reserved for real logic — never a one-line forward of a
-single repository call.
-
-- Reach for a use case when you need validation, orchestration across multiple
-  repositories, or a derived calculation.
-- Use cases name the intent: `createExpense`, `calculateDaysLeft`, `deleteTrip`.
-- Use cases never get their own provider. A notifier or a view provider
-  constructs the use case from the repository providers it already reads.
-- Calculation use cases are pure: they take already-loaded data (trip,
-  accounts, transactions) and return a `Result`, so they recompute reactively
-  when their source providers emit.
-- Reads with no logic skip the use-case layer entirely: a data provider watches
-  the repository stream directly.
-
-### Do / Don't: Use Cases Are Plain Classes, Not Providers
-
-**Don't** — a provider wrapping a use case, or a pass-through use case:
-
-```dart
-@riverpod                                  // ← no provider per use case
-LoadTripsUseCase loadTripsUseCase(Ref ref) =>
-    LoadTripsUseCase(ref.watch(tripRepositoryProvider));
-
-class LoadTripsUseCase {                    // ← pure forward, delete it
-  Future<Result<List<Trip>, Failure>> call() => _repository.listTrips();
+  @override
+  Future<Result<ProjectReceipt, Failure>> beforeCreate(ProjectReceipt draft) async {
+    if (draft.track == null) {
+      return const Err(ValidationFailure('Select a project track.'));
+    }
+    return Ok(ProjectReceipt.confirmed(track: draft.track, seats: draft.seats));
+  }
 }
 ```
 
-**Do** — read straight from the repository stream; keep use cases for real logic:
+**Write-only controllers → `MutationNotifier`.** A controller that does not back
+a list — a form that submits to a remote API, say — has no `watchAll` stream.
+Mix `MutationNotifier<T>` from `core/application/` onto an `AsyncNotifier<T>`
+instead. Its `mutate` helper flips to loading while preserving the previous
+value, folds the action's success value into state via `onSuccess`, keeps the
+old value on error, logs failures through `loggerProvider`, and returns the
+`Result` so the caller can still branch on it.
 
 ```dart
-// application/budgeting_providers.dart — reads need no use case
-@riverpod
-Stream<List<Trip>> trips(Ref ref) =>
-    ref.watch(tripRepositoryProvider).watchTrips();
+class SubmitFeedbackController extends _$SubmitFeedbackController
+    with MutationNotifier<FeedbackState> {
+  @override
+  FeedbackState build() => const FeedbackState.empty();
 
-// a notifier constructs the use case it needs, no provider involved
-final result = await CreateExpenseUseCase(
-  tripRepository: ref.read(tripRepositoryProvider),
-  accountRepository: ref.read(accountRepositoryProvider),
-  transactionRepository: ref.read(transactionRepositoryProvider),
-  convertToHomeCurrency: ConvertToHomeCurrencyUseCase(
-    ref.read(exchangeRateRepositoryProvider),
-  ),
-  idGenerator: ref.read(budgetingIdGeneratorProvider),
-).call(/* ... */);
-```
-
-### Do / Don't: Business Validation Belongs In The Use Case
-
-**Don't** — validation scattered between the controller and the repository:
-
-```dart
-// controller clamps as a business rule, not just a UI guard
-await _loadReceipt(track: track, seats: seats.clamp(1, maxSeats));
-
-// repository fake re-checks the same rule
-if (seats < 1) return Err(ValidationFailure('...'));
-```
-
-**Do** — use case owns the rule; repository trusts its input:
-
-```dart
-// use case — single source of truth for this business rule
-if (seats < 1) {
-  return Future.value(
-    const Err(ValidationFailure('At least one seat is required.')),
+  Future<void> submit(String message) => mutate(
+    () => ref.read(submitFeedbackUseCaseProvider)(message),
+    onSuccess: (_) => const FeedbackState.sent(),
+    logMessage: 'Feedback submission failed',
   );
 }
-return _repository.fetchReceipt(track: track, seats: seats);
 ```
 
-### Do / Don't: Live Data Comes From Repository Streams
+### Do / Don't: Validation Lives In Hooks, Not Scattered
 
-Live reads need no use case. The repository exposes a `Stream`, a data provider
-returns it, and Riverpod handles the subscription, converting each emission to
-`AsyncValue<T>` automatically. No `StreamSubscription`, no `dispose`, no manual
-invalidation — a write to the repository re-emits and every listener updates.
+**Don't** — re-checking the same rule in the widget and the repository:
 
 ```dart
-// data/order_repository.dart
-Stream<List<Order>> watchOrders(String userId);
+// widget guards before calling, repository re-checks after — two homes, drift
+if (draft.track == null) return;
+// ...later, inside a fake/repo:
+if (entity.track == null) return Err(ValidationFailure('...'));
+```
 
-// application/orders_providers.dart
-@riverpod
-Stream<List<Order>> orders(Ref ref, String userId) =>
-    ref.watch(orderRepositoryProvider).watchOrders(userId);
+**Do** — `beforeCreate` is the single home for the rule; it can read other
+providers through `ref` and return an `Err` the page surfaces:
+
+```dart
+@override
+Future<Result<ProjectReceipt, Failure>> beforeCreate(ProjectReceipt draft) async {
+  if (draft.track == null) {
+    return const Err(ValidationFailure('Select a project track.'));
+  }
+  return Ok(ProjectReceipt.confirmed(track: draft.track, seats: draft.seats));
+}
+```
+
+### Do / Don't: Use A Use Case Only For Shared Orchestration
+
+**Don't** — wrap a single repository call in a use case just to have a layer:
+
+```dart
+class LoadOrdersUseCase {
+  const LoadOrdersUseCase(this._repository);
+  final OrderRepository _repository;
+  Future<Result<List<Order>, Failure>> call() => _repository.list(); // pass-through
+}
+```
+
+**Do** — extract a use case only when the same multi-step logic runs from two or
+more controllers. It takes repository *interfaces* (never concretions) and is
+exposed through a provider:
+
+```dart
+class CheckoutUseCase {
+  const CheckoutUseCase(this._orders, this._payments);
+  final OrderRepository _orders;
+  final PaymentRepository _payments;
+  // multi-repo flow shared by, e.g., CartController and QuickBuyController
+  Future<Result<Order, Failure>> call(Cart cart) async { /* ... */ }
+}
+```
+
+A single controller's multi-repository operation belongs in its hooks
+(`beforeCreate` + `afterCreate` rollback), not a use case.
+
+### Streams Need No Use Case
+
+For live data the controller's `build()` returns the repository stream directly
+via `watchAll()`. Riverpod owns the subscription and converts each emission to
+`AsyncValue<List<T>>` — no `StreamSubscription`, no `dispose`, no use case.
+
+```dart
+@override
+Stream<List<Order>> build() => watchAll(); // from LocalCrudNotifier
 ```
 
 ## Routing
@@ -427,14 +521,14 @@ try {
 }
 ```
 
-**Do** — repository returns `Result<T, Failure>`; controller maps it:
+**Do** — repository returns `Result<T, Failure>`; controller maps it with a switch:
 
 ```dart
-final result = await _repo.fetchReceipts();
-state = result.when(
-  ok:  (r) => state.copyWith(receipts: r, error: null),
-  err: (f) => state.copyWith(error: f),
-);
+final result = await _repository.list();
+state = switch (result) {
+  Ok(value: final receipts) => AsyncData(receipts),
+  Err(failure: final failure) => AsyncError(failure, StackTrace.current),
+};
 ```
 
 ### Do / Don't: Logger, Not `print`
@@ -470,7 +564,81 @@ Mirror the app shape under `test/`.
 
 Prefer focused tests around behavior that could realistically regress.
 
-Private helpers and `_buildX` methods cannot be tested in isolation. If you
-want a test for a piece of logic, it has to live in a domain file, a
-controller, a formatter, a mapper, or a public widget. That is another reason
-to extract it.
+Logic buried in a page's `build` cannot be tested in isolation. If you want a
+test for a piece of logic, it has to live in a domain file, a controller, a
+formatter, a mapper, or a shared widget. That is another reason to keep pages
+to pure composition and push logic down.
+
+## Review Checklist
+
+Use this before opening or approving a PR.
+
+### Architecture
+
+- Feature code lives under `lib/features/<feature>/`.
+- `core/` stays app-wide and feature-free.
+- `shared/widgets/` is the only widget layer; features have no `widgets/` folder.
+- Imports follow the intended dependency direction.
+- No new architecture package was added without a clear reason.
+
+### Pages And Widgets
+
+- Pages compose `shared/widgets/` inline, watch state, and dispatch intent.
+- No page-size limit — a long, flat `build` is fine.
+- New reusable UI is added to `lib/shared/widgets/`, not a feature widget.
+- Formatting lives in formatter files.
+- Enum labels, icons, and colors live in mapper files.
+- Screens that depend on async state use `AppAsyncValueView<T>` instead of
+  hand-rolling loading/error/data branches.
+- Pages do not call APIs, databases, SDKs, repositories, use cases, or
+  platform services.
+- Text scales, truncates, or wraps without overflow.
+
+### No Throwaway Private Code
+
+- No `Widget _buildX()` methods anywhere — write the tree inline in `build`.
+- No feature widget classes, whether private (`class _SectionCard extends
+  StatelessWidget`) or in a feature file. Reusable UI is a shared widget.
+- No private `_formatX` / `_iconFor` / `_sortBy` helpers in page files. They
+  belong in `<feature>_formatters.dart`, `<feature>_mappers.dart`, the
+  controller, or the domain model.
+
+### State And Data
+
+- Business state lives in controllers/notifiers/services, not widgets.
+- Controllers expose intent-level methods.
+- Controllers reach data via the store (`LocalCrudNotifier` + a `localRepository`
+  provider) or a use case — never by importing a concrete repository
+  implementation (`HiveFooRepository`).
+- Business rules live in `LocalCrudNotifier` hooks (`beforeCreate` /
+  `afterCreate` …); a use case appears only when the same orchestration is
+  shared by two or more controllers.
+- Use cases live under `application/use_cases/`, take repository interfaces, and
+  are wired through Riverpod providers in `application/`.
+- Write controllers use `MutationNotifier` when they only need
+  loading/error/success mutation state.
+- Repositories/services normalize low-level failures and return `Result<T, Failure>`.
+- Hive-backed repositories reuse `HiveLocalRepository<T>` with inline
+  `id` / `toJson` / `fromJson` functions instead of hand-rolling local
+  list/watch/fetch/save/delete plumbing.
+- Controllers unwrap `Result<T, Failure>` into `AsyncValue<T>` before the UI renders it.
+- Derived values are getters or pure functions near the owning model/state.
+- UI displays localized, user-facing messages.
+
+### Routing, Logging, And Side Effects
+
+- Route paths are centralized in `AppRoutes`.
+- Navigation uses the app router instead of raw scattered strings.
+- App code uses the logger abstraction instead of `print`.
+- Platform SDKs and side effects are behind services/providers.
+- Subscriptions, timers, controllers, and focus nodes have clear owners.
+
+### Tests And Tooling
+
+- Domain/controller behavior has focused tests.
+- Use cases with behavior beyond simple forwarding have focused tests.
+- Important shared widgets and flows have widget tests.
+- Generated files were regenerated after annotation changes.
+- `dart format .` has run.
+- `flutter analyze` passes.
+- `flutter test` passes.

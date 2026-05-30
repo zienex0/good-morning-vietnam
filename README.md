@@ -1,21 +1,22 @@
-# Flutter Foundation Kit
+# Flutter Foundation Framework
 
-A source-only Flutter baseline for teams. It gives new apps a working
-architecture example, shared UI primitives, strict analyzer defaults, async data
-flow, and short guardrail docs that explain how to extend the kit without
-diluting it.
+An opinionated source-first Flutter framework for teams. It gives new apps
+predictable architecture rails, shared UI primitives, local data storage
+helpers, strict analyzer defaults, async data flow, and short guardrail docs
+that make feature work feel like bread and butter.
 
 ## What's Included
 
 - `lib/core`: app-wide routing, theme, brand tokens, logging, result/failure
-  primitives, and localization helpers.
+  primitives, application-state helpers, local data framework pieces, and
+  localization helpers.
 - `lib/shared/widgets`: reusable page, chart, form, async, empty-state, and
   layout widgets.
 - `lib/features/template`: a small working feature that demonstrates the
-  expected data, domain, use case, controller, presentation, formatter, mapper,
-  and widget split.
-- `docs`: architecture rules, feature-addition steps, template-renaming steps,
-  and a review checklist.
+  expected data, domain, controller, presentation, formatter, and mapper split
+  using `LocalCrudNotifier` + hooks.
+- `docs`: architecture rules (ending with the review checklist) and
+  feature-addition steps.
 - `test`: baseline tests for app boot, shared widgets, and the template
   feature's domain/controller behavior.
 - `Makefile`: local shortcuts for generation, formatting, analysis, tests, and
@@ -23,20 +24,34 @@ diluting it.
 
 ## Reference Flow
 
-The template feature demonstrates the default feature data path:
+Framework features use a boring, repeatable path:
 
 ```text
-Repository -> Result<T, Failure> -> UseCase -> Controller -> AsyncValue<T> -> AsyncValueView<T> -> Widgets
+localRepository<T> -> LocalCrudNotifier (+ hooks) -> Controller -> AsyncValue<List<T>> -> AppAsyncValueView<T> -> Widgets
 ```
 
-Keep repositories behind use cases once a feature has a real data boundary.
-Controllers should expose user intent methods and translate use case results
-into `AsyncValue<T>`. Pages should render full-screen async state through
-`AsyncValueView<T>` instead of hand-rolling loading/error/data branches.
+Most features are plain CRUD over local storage: declare the repository in one
+line with `localRepository<T>`, mix `LocalCrudNotifier<T>` into the controller,
+return `watchAll()` from `build()`, and put business rules in `beforeCreate` /
+`afterCreate` hooks. Repositories return `Result<T, Failure>`; controllers expose the
+live list plus intent methods; pages render full-screen async state through
+`AppAsyncValueView<T>` instead of hand-rolling loading/error/data branches.
+Reach for a use case only when the same orchestration must run from two or more
+controllers, and use `MutationNotifier<T>` for a write-only controller that has
+no list to watch.
+
+## Local Data Framework
+
+Hive-backed feature repositories reuse `HiveLocalRepository<T>` with inline
+`id` / `toJson` / `fromJson` functions instead of rewriting
+list/watch/fetch/create/update/delete plumbing. For plain CRUD,
+`localRepository<T>` wires the whole thing in one declaration and exposes the
+`CrudRepository<T, String>` surface; subclass `HiveLocalRepository<T>` only when
+a feature needs custom queries, cascades, active selections, or domain commands.
 
 ## Start A New App
 
-Use this repository as the source baseline, then generate only the platform
+Use this repository as the source framework, then generate only the platform
 folders the app needs:
 
 ```sh
@@ -48,8 +63,43 @@ flutter test
 
 Remove any platform from the `--platforms` list when it is not needed.
 
-Then follow `docs/RENAMING_TEMPLATE.md` to rename package metadata, brand
-tokens, strings, and the starter feature.
+Then work through **Renaming The Template** below to rename package metadata,
+brand tokens, strings, and the starter feature.
+
+## Renaming The Template
+
+After creating a new app from the kit, work through these once:
+
+### 1. Rename Dart package metadata
+
+Update `pubspec.yaml` — `name`, `description`, and `version` (if the new app
+should not inherit the starter version) — then run `flutter pub get`.
+
+### 2. Rename user-facing brand tokens
+
+Start in `lib/core/theme/app_brand.dart`: `AppBrand.appName`,
+`AppBrand.fontFamily` (if the app uses a different bundled font), and
+`AppColors` (if the app needs a different brand palette). Keep product-specific
+brand values here instead of scattering them through widgets or theme overrides.
+
+### 3. Rename app strings
+
+Update `lib/core/l10n/app_localizations.dart` while the project uses the
+lightweight string layer. If the app needs real localization, replace it with
+Flutter `gen-l10n` and ARB files before product copy grows.
+
+### 4. Replace the template feature
+
+`lib/features/template/` is a working architecture reference, not product code.
+Keep it while building the first real feature and copy its shape, or delete it
+once the first feature proves the pattern. When deleting it, also remove its
+route from `lib/core/routing/app_router.dart` and its tests under
+`test/features/template/`.
+
+### 5. Regenerate and verify
+
+Run `dart run build_runner build --delete-conflicting-outputs`, commit generated
+files alongside the source that produced them, then run the baseline below.
 
 ## Guardrails
 
@@ -57,14 +107,13 @@ tokens, strings, and the starter feature.
 - Read `docs/ARCHITECTURE.md` before changing structure, state, routing,
   errors, logging, localization, or test shape.
 - Follow `docs/ADDING_FEATURE.md` when adding a new feature.
-- Follow `docs/RENAMING_TEMPLATE.md` when creating a real app from the kit.
-- Use `docs/REVIEW_CHECKLIST.md` before opening a PR.
-- Keep feature-specific widgets inside their feature until they are reused by
-  more than one feature.
+- Work through **Renaming The Template** (above) when creating a real app.
+- Use the **Review Checklist** at the end of `docs/ARCHITECTURE.md` before
+  opening a PR.
 - Keep `core/` app-wide and stable. Keep `shared/` UI-only and reusable.
-- No `Widget _buildX()` methods, no private widget classes inside page files,
-  no private helpers in `presentation/`. If it's worth naming, it's worth a
-  file. If it isn't worth a file, inline it.
+- Pages compose `lib/shared/widgets/` inline — that is the only widget layer.
+  No feature widget classes, no `Widget _buildX()` methods, no private widget
+  classes or helpers. If a UI piece is missing, add it to `lib/shared/widgets/`.
 
 ## Baseline Commands
 
