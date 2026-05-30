@@ -7,18 +7,12 @@ import 'package:flutter_foundation_kit/core/logging/logger.dart';
 import 'package:flutter_foundation_kit/core/routing/app_router.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/core/theme/theme_mode_controller.dart';
-import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/application/trips_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  final logContainer = ProviderContainer();
-  final log = logContainer.read(loggerProvider);
+void main() {
+  final container = ProviderContainer();
+  final log = container.read(loggerProvider);
 
   FlutterError.onError = (details) {
     log.error(
@@ -29,27 +23,20 @@ Future<void> main() async {
     FlutterError.presentError(details);
   };
 
-  PlatformDispatcher.instance.onError = (error, stack) {
-    log.error('Uncaught platform error', error: error, stackTrace: stack);
-    return true;
-  };
-
-  await Hive.initFlutter();
-  final tripsBox = await Hive.openBox<String>('budgeting.trips');
-  final accountsBox = await Hive.openBox<String>('budgeting.accounts');
-  final transactionsBox = await Hive.openBox<String>('budgeting.transactions');
-  final settingsBox = await Hive.openBox<String>('budgeting.settings');
-
-  runApp(
-    ProviderScope(
-      overrides: [
-        tripsBoxProvider.overrideWithValue(tripsBox),
-        settingsBoxProvider.overrideWithValue(settingsBox),
-        accountsBoxProvider.overrideWithValue(accountsBox),
-        transactionsBoxProvider.overrideWithValue(transactionsBox),
-      ],
-      child: const MainApp(),
-    ),
+  runZonedGuarded(
+    () {
+      WidgetsFlutterBinding.ensureInitialized();
+      PlatformDispatcher.instance.onError = (error, stack) {
+        log.error('Uncaught platform error', error: error, stackTrace: stack);
+        return true;
+      };
+      runApp(
+        UncontrolledProviderScope(container: container, child: const MainApp()),
+      );
+    },
+    (error, stack) {
+      log.error('Uncaught zone error', error: error, stackTrace: stack);
+    },
   );
 }
 
@@ -59,7 +46,7 @@ class MainApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.read(appRouterProvider);
-    final themeMode = ref.watch(themeModeControllerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: context.l10n.appName,

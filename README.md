@@ -33,7 +33,7 @@ localRepository<T> -> LocalCrudNotifier (+ hooks) -> Controller -> AsyncValue<Li
 Most features are plain CRUD over local storage: declare the repository in one
 line with `localRepository<T>`, mix `LocalCrudNotifier<T>` into the controller,
 return `watchAll()` from `build()`, and put business rules in `beforeCreate` /
-`afterCreate` hooks. Repositories return `Result<T, Failure>`; controllers expose the
+`afterCreate` hooks. Repositories return `Result<T>`; controllers expose the
 live list plus intent methods; pages render full-screen async state through
 `AppAsyncValueView<T>` instead of hand-rolling loading/error/data branches.
 Reach for a use case only when the same orchestration must run from two or more

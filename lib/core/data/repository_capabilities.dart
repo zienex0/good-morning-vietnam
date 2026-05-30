@@ -2,10 +2,9 @@ import 'package:flutter_foundation_kit/core/result/result.dart';
 
 /// Repository capability for watching an unscoped collection.
 ///
-/// One-shot reads return `Result<T, Failure>`; watch streams surface failures
-/// as stream errors so Riverpod converts them to `AsyncValue.error` (an
-/// `AsyncError`). Do not wrap stream payloads in `Result` — the error channel
-/// is `AsyncValue`.
+/// One-shot reads return `Result<T>`; watch streams surface failures as stream
+/// errors so Riverpod converts them to `AsyncValue.error` (an `AsyncError`).
+/// Do not wrap stream payloads in `Result` — the error channel is `AsyncValue`.
 abstract interface class WatchAll<T> {
   Stream<List<T>> watchAll();
 }
@@ -20,22 +19,22 @@ abstract interface class WatchScoped<T, Scope> {
 
 /// Repository capability for fetching one entity by id.
 abstract interface class FetchById<T, Id> {
-  Future<Result<T, Failure>> fetchById(Id id);
+  Future<Result<T>> fetchById(Id id);
 }
 
 /// Repository capability for creating an entity from an input object.
 abstract interface class CreateEntity<T, Input> {
-  Future<Result<T, Failure>> create(Input input);
+  Future<Result<T>> create(Input input);
 }
 
 /// Repository capability for updating an entity from an input object.
 abstract interface class UpdateEntity<T, Input> {
-  Future<Result<T, Failure>> update(Input input);
+  Future<Result<T>> update(Input input);
 }
 
 /// Repository capability for deleting one entity by id.
 abstract interface class DeleteById<Id> {
-  Future<Result<void, Failure>> deleteById(Id id);
+  Future<Result<void>> deleteById(Id id);
 }
 
 /// The full create/read/update/delete surface a [HiveLocalRepository] exposes.

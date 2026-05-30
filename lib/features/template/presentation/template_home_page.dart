@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/l10n/app_localizations.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/template/application/template_providers.dart';
+import 'package:flutter_foundation_kit/features/template/application/template_controller.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_receipt.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_track.dart';
 import 'package:flutter_foundation_kit/features/template/presentation/template_formatters.dart';
@@ -13,22 +14,40 @@ import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class TemplateHomePage extends ConsumerWidget {
+/// Template home page — copy its shape when creating a new feature.
+///
+/// Demonstrates the [LocalCrudNotifier] pattern end-to-end:
+/// - Form state (track, seats) lives in the widget as local [StatefulWidget]
+///   state, because it is transient UI — not business state.
+/// - The controller state is the confirmed-receipt list, driven by the
+///   repository's watch stream.
+/// - Tapping "Confirm" calls [TemplateController.create], which runs
+///   [TemplateController.beforeCreate] (validation + stamping) and then
+///   persists via the repository. The [Result] drives the snackbar.
+class TemplateHomePage extends ConsumerStatefulWidget {
   const TemplateHomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncState = ref.watch(templateControllerProvider);
+  ConsumerState<TemplateHomePage> createState() => _TemplateHomePageState();
+}
+
+class _TemplateHomePageState extends ConsumerState<TemplateHomePage> {
+  ProjectTrack? _track = ProjectTrack.engineering;
+  int _seats = 3;
+
+  ProjectReceipt get _draftReceipt =>
+      ProjectReceipt(track: _track, seats: _seats);
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncReceipts = ref.watch(templateControllerProvider);
     final controller = ref.read(templateControllerProvider.notifier);
-    final isBusy = asyncState.isLoading;
 
     return AppAsyncValueView(
-      value: asyncState,
+      value: asyncReceipts,
       onRetry: () => ref.invalidate(templateControllerProvider),
-      data: (state) {
-        final receipt = state.receipt;
-        final confirmedCount =
-            ref.watch(templateConfirmedCountProvider).value ?? 0;
+      data: (confirmedReceipts) {
+        final receipt = _draftReceipt;
 
         return AppSliverPage(
           title: context.l10n.appName,
@@ -51,7 +70,6 @@ class TemplateHomePage extends ConsumerWidget {
                 ),
                 AppButton.primary(
                   label: 'Confirm',
-                  loading: isBusy,
                   onPressed: () async {
                     final confirmed = await AppDialog.confirm(
                       context,
@@ -60,16 +78,23 @@ class TemplateHomePage extends ConsumerWidget {
                           'This confirms the sample receipt for '
                           '${formatTemplateMoney(receipt.total)}.',
                     );
-                    if (!confirmed) {
-                      return;
-                    }
-                    unawaited(controller.confirmReceipt());
-                    if (context.mounted) {
-                      AppSnackBars.success(
-                        context,
-                        'Sample receipt confirmed for '
-                        '${formatTemplateMoney(receipt.total)}.',
-                      );
+                    if (!confirmed || !context.mounted) return;
+                    final result = await controller.create(receipt);
+                    if (!context.mounted) return;
+                    switch (result) {
+                      case Ok():
+                        AppSnackBars.success(
+                          context,
+                          'Receipt confirmed for '
+                          '${formatTemplateMoney(receipt.total)}.',
+                        );
+                      case Err(failure: ValidationFailure(:final message)):
+                        AppSnackBars.error(context, message);
+                      case Err():
+                        AppSnackBars.error(
+                          context,
+                          'Something went wrong. Please try again.',
+                        );
                     }
                   },
                 ),
@@ -148,13 +173,17 @@ class TemplateHomePage extends ConsumerWidget {
                   const AppSectionHeader(
                     eyebrow: 'Setup',
                     title: 'Project plan',
+                    body:
+                        'Track and seat count are local form state — they live '
+                        'in the widget, not the controller. The controller only '
+                        'sees a receipt after "Confirm" is tapped.',
                   ),
                   const SizedBox(height: AppSpacing.pageWithinSectionGap),
                   AppDropdown<ProjectTrack>(
-                    value: state.track,
+                    value: _track,
                     placeholder: const Text('Choose track'),
                     showNoneOption: false,
-                    onChanged: (track) => unawaited(controller.setTrack(track)),
+                    onChanged: (track) => setState(() => _track = track),
                     options: [
                       for (final track in ProjectTrack.values)
                         AppDropdownOption(
@@ -177,14 +206,12 @@ class TemplateHomePage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.pageWithinSectionGap),
                   AppCounterStepper(
                     label: 'Seats',
-                    value: state.seats,
-                    onDecrement:
-                        !isBusy && state.seats > TemplateController.minSeats
-                        ? () => unawaited(controller.decrementSeats())
+                    value: _seats,
+                    onDecrement: _seats > TemplateController.minSeats
+                        ? () => setState(() => _seats--)
                         : null,
-                    onIncrement:
-                        !isBusy && state.seats < TemplateController.maxSeats
-                        ? () => unawaited(controller.incrementSeats())
+                    onIncrement: _seats < TemplateController.maxSeats
+                        ? () => setState(() => _seats++)
                         : null,
                   ),
                   const SizedBox(height: AppSpacing.pageWithinSectionGap),
@@ -193,11 +220,11 @@ class TemplateHomePage extends ConsumerWidget {
                       children: [
                         AppKeyValueRow(
                           label: 'Plan',
-                          value: formatProjectTrackLabel(state.track),
+                          value: formatProjectTrackLabel(_track),
                         ),
                         AppKeyValueRow(
                           label: 'Team seats',
-                          value: state.seats.toString(),
+                          value: _seats.toString(),
                         ),
                         AppKeyValueRow(
                           label: 'Seat rate',
@@ -240,12 +267,12 @@ class TemplateHomePage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.pageBetweenSectionGap),
                   const AppSectionHeader(
                     eyebrow: 'State',
-                    title: 'Reactive streams alongside controller state',
+                    title: 'Reactive list from the repository',
                     body:
-                        'The confirmed count arrives via a stream provider '
-                        'backed by a use case. The controller never tracks it '
-                        'locally — the stream delivers it reactively to any '
-                        'widget that watches.',
+                        'The confirmed-receipt count comes directly from the '
+                        'controller\'s live list — no stream provider or use '
+                        'case needed. Confirm a receipt above to see it '
+                        'increment.',
                   ),
                   const SizedBox(height: AppSpacing.pageWithinSectionGap),
                   AppListSection(
@@ -253,7 +280,7 @@ class TemplateHomePage extends ConsumerWidget {
                       AppTile(
                         leading: const Icon(Icons.task_alt_rounded),
                         title: 'Confirmed receipts',
-                        subtitle: confirmedCount.toString(),
+                        subtitle: confirmedReceipts.length.toString(),
                         showChevron: false,
                       ),
                     ],

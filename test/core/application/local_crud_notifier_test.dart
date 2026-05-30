@@ -15,25 +15,25 @@ class _FakeRepo implements CrudRepository<_Item, String> {
   final List<String> deleted = [];
 
   @override
-  Future<Result<_Item, Failure>> create(_Item input) async {
+  Future<Result<_Item>> create(_Item input) async {
     created.add(input);
     return Ok(input);
   }
 
   @override
-  Future<Result<_Item, Failure>> update(_Item input) async {
+  Future<Result<_Item>> update(_Item input) async {
     updated.add(input);
     return Ok(input);
   }
 
   @override
-  Future<Result<void, Failure>> deleteById(String id) async {
+  Future<Result<void>> deleteById(String id) async {
     deleted.add(id);
     return const Ok(null);
   }
 
   @override
-  Future<Result<_Item, Failure>> fetchById(String id) async =>
+  Future<Result<_Item>> fetchById(String id) async =>
       const Err(NotFoundFailure());
 
   @override
@@ -42,11 +42,11 @@ class _FakeRepo implements CrudRepository<_Item, String> {
 
 class _FailingRepo extends _FakeRepo {
   @override
-  Future<Result<_Item, Failure>> create(_Item input) async =>
+  Future<Result<_Item>> create(_Item input) async =>
       const Err(ValidationFailure('repo rejected'));
 
   @override
-  Future<Result<void, Failure>> deleteById(String id) async =>
+  Future<Result<void>> deleteById(String id) async =>
       const Err(ValidationFailure('delete rejected'));
 }
 
@@ -64,24 +64,24 @@ class _Store with LocalCrudNotifier<_Item> {
   final CrudRepository<_Item, String> repository;
   final bool allowCreate;
 
-  final void Function(_Item entity, Result<_Item, Failure> result)? afterCreateCallback;
-  final void Function(_Item entity, Result<_Item, Failure> result)? afterUpdateCallback;
-  final void Function(String id, Result<void, Failure> result)? afterDeleteCallback;
+  final void Function(_Item entity, Result<_Item> result)? afterCreateCallback;
+  final void Function(_Item entity, Result<_Item> result)? afterUpdateCallback;
+  final void Function(String id, Result<void> result)? afterDeleteCallback;
 
   @override
-  Future<Result<_Item, Failure>> beforeCreate(_Item entity) async =>
+  Future<Result<_Item>> beforeCreate(_Item entity) async =>
       allowCreate ? Ok(entity) : const Err(ValidationFailure('blocked'));
 
   @override
-  Future<void> afterCreate(_Item entity, Result<_Item, Failure> result) async =>
+  Future<void> afterCreate(_Item entity, Result<_Item> result) async =>
       afterCreateCallback?.call(entity, result);
 
   @override
-  Future<void> afterUpdate(_Item entity, Result<_Item, Failure> result) async =>
+  Future<void> afterUpdate(_Item entity, Result<_Item> result) async =>
       afterUpdateCallback?.call(entity, result);
 
   @override
-  Future<void> afterDelete(String id, Result<void, Failure> result) async =>
+  Future<void> afterDelete(String id, Result<void> result) async =>
       afterDeleteCallback?.call(id, result);
 }
 
@@ -93,7 +93,7 @@ void main() {
 
       final result = await store.create(const _Item('a', 1));
 
-      expect(result, isA<Ok<_Item, Failure>>());
+      expect(result, isA<Ok<_Item>>());
       expect(repo.created, hasLength(1));
     });
 
@@ -103,14 +103,14 @@ void main() {
 
       final result = await store.create(const _Item('a', 1));
 
-      expect(result, isA<Err<_Item, Failure>>());
+      expect(result, isA<Err<_Item>>());
       expect(repo.created, isEmpty);
     });
 
     test('afterCreate fires with the entity and success result', () async {
       final repo = _FakeRepo();
       _Item? capturedEntity;
-      Result<_Item, Failure>? capturedResult;
+      Result<_Item>? capturedResult;
       final store = _Store(
         repo,
         afterCreateCallback: (e, r) {
@@ -122,12 +122,12 @@ void main() {
       await store.create(const _Item('a', 1));
 
       expect(capturedEntity?.id, 'a');
-      expect(capturedResult, isA<Ok<_Item, Failure>>());
+      expect(capturedResult, isA<Ok<_Item>>());
     });
 
     test('afterCreate fires with Err when repository rejects', () async {
       final repo = _FailingRepo();
-      Result<_Item, Failure>? capturedResult;
+      Result<_Item>? capturedResult;
       final store = _Store(
         repo,
         afterCreateCallback: (_, r) => capturedResult = r,
@@ -135,7 +135,7 @@ void main() {
 
       await store.create(const _Item('a', 1));
 
-      expect(capturedResult, isA<Err<_Item, Failure>>());
+      expect(capturedResult, isA<Err<_Item>>());
     });
 
     test('afterCreate does not fire when beforeCreate short-circuits', () async {
@@ -157,7 +157,7 @@ void main() {
     test('afterUpdate fires with the entity and result', () async {
       final repo = _FakeRepo();
       _Item? capturedEntity;
-      Result<_Item, Failure>? capturedResult;
+      Result<_Item>? capturedResult;
       final store = _Store(
         repo,
         afterUpdateCallback: (e, r) {
@@ -169,7 +169,7 @@ void main() {
       await store.update(const _Item('b', 2));
 
       expect(capturedEntity?.id, 'b');
-      expect(capturedResult, isA<Ok<_Item, Failure>>());
+      expect(capturedResult, isA<Ok<_Item>>());
     });
   });
 
@@ -186,7 +186,7 @@ void main() {
     test('afterDelete fires with the id and success result', () async {
       final repo = _FakeRepo();
       String? capturedId;
-      Result<void, Failure>? capturedResult;
+      Result<void>? capturedResult;
       final store = _Store(
         repo,
         afterDeleteCallback: (id, r) {
@@ -198,12 +198,12 @@ void main() {
       await store.delete('x');
 
       expect(capturedId, 'x');
-      expect(capturedResult, isA<Ok<void, Failure>>());
+      expect(capturedResult, isA<Ok<void>>());
     });
 
     test('afterDelete fires with Err when repository rejects', () async {
       final repo = _FailingRepo();
-      Result<void, Failure>? capturedResult;
+      Result<void>? capturedResult;
       final store = _Store(
         repo,
         afterDeleteCallback: (_, r) => capturedResult = r,
@@ -211,7 +211,7 @@ void main() {
 
       await store.delete('x');
 
-      expect(capturedResult, isA<Err<void, Failure>>());
+      expect(capturedResult, isA<Err<void>>());
     });
   });
 }

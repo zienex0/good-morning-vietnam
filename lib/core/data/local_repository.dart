@@ -70,7 +70,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
   Future<Box<String>>? _cachedBox;
   Future<Box<String>> _box() => _cachedBox ??= _openBox();
 
-  Future<Result<List<T>, Failure>> list({EntityPredicate<T>? where}) async {
+  Future<Result<List<T>>> list({EntityPredicate<T>? where}) async {
     final box = await _box();
     final invalidKeys = <dynamic>[];
     final items = <T>[];
@@ -120,7 +120,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
   Stream<List<T>> watchAll() => watch();
 
   @override
-  Future<Result<T, Failure>> fetchById(String id) async {
+  Future<Result<T>> fetchById(String id) async {
     final box = await _box();
     final raw = box.get(id);
     if (raw == null) {
@@ -139,7 +139,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
   }
 
   @override
-  Future<Result<T, Failure>> create(T entity) async {
+  Future<Result<T>> create(T entity) async {
     final box = await _box();
     final entityId = id(entity);
     if (box.containsKey(entityId)) {
@@ -151,7 +151,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
   }
 
   @override
-  Future<Result<T, Failure>> update(T entity) async {
+  Future<Result<T>> update(T entity) async {
     final box = await _box();
     final entityId = id(entity);
     if (!box.containsKey(entityId)) {
@@ -163,7 +163,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
   }
 
   @override
-  Future<Result<void, Failure>> deleteById(String id) async {
+  Future<Result<void>> deleteById(String id) async {
     final box = await _box();
     if (!box.containsKey(id)) {
       return const Err(NotFoundFailure());
@@ -173,7 +173,7 @@ class HiveLocalRepository<T> implements CrudRepository<T, String> {
     return const Ok(null);
   }
 
-  Future<Result<void, Failure>> deleteWhere(EntityPredicate<T> where) async {
+  Future<Result<void>> deleteWhere(EntityPredicate<T> where) async {
     final box = await _box();
     final ids = <dynamic>[];
 

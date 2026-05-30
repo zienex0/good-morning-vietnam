@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/accounts/presentation/account_detail_page.dart';
-import 'package:flutter_foundation_kit/features/accounts/presentation/account_form_page.dart';
-import 'package:flutter_foundation_kit/features/accounts/presentation/accounts_page.dart';
 import 'package:flutter_foundation_kit/features/gallery/presentation/gallery_page.dart';
 import 'package:flutter_foundation_kit/features/template/presentation/template_detail_page.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/expense_form_page.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/set_balance_form_page.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/top_up_form_page.dart';
-import 'package:flutter_foundation_kit/features/transactions/presentation/transfer_form_page.dart';
-import 'package:flutter_foundation_kit/features/trips/presentation/trip_dashboard_page.dart';
-import 'package:flutter_foundation_kit/features/trips/presentation/trip_form_page.dart';
-import 'package:flutter_foundation_kit/features/trips/presentation/trip_settings_page.dart';
+import 'package:flutter_foundation_kit/features/template/presentation/template_home_page.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -20,7 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'app_router.g.dart';
 
 @Riverpod(keepAlive: true)
-GoRouter appRouter(Ref ref) => GoRouter(
+GoRouter appRouter(AppRouterRef ref) => GoRouter(
   initialLocation: AppRoutes.home,
   routes: [
     StatefulShellRoute.indexedStack(
@@ -33,19 +24,9 @@ GoRouter appRouter(Ref ref) => GoRouter(
             selectedIcon: Icons.home_rounded,
           ),
           AppShellDestination(
-            label: 'Accounts',
-            icon: Icons.account_balance_wallet_outlined,
-            selectedIcon: Icons.account_balance_wallet,
-          ),
-          AppShellDestination(
             label: 'Gallery',
             icon: Icons.widgets_outlined,
             selectedIcon: Icons.widgets_rounded,
-          ),
-          AppShellDestination(
-            label: 'Trip',
-            icon: Icons.settings_outlined,
-            selectedIcon: Icons.settings,
           ),
         ],
       ),
@@ -54,15 +35,7 @@ GoRouter appRouter(Ref ref) => GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.home,
-              builder: (context, state) => const TripDashboardPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.accounts,
-              builder: (context, state) => const AccountsPage(),
+              builder: (context, state) => const TemplateHomePage(),
             ),
           ],
         ),
@@ -74,59 +47,7 @@ GoRouter appRouter(Ref ref) => GoRouter(
             ),
           ],
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.tripSettings,
-              builder: (context, state) => const TripSettingsPage(),
-            ),
-          ],
-        ),
       ],
-    ),
-    GoRoute(
-      path: AppRoutes.newAccount,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const AccountFormPage()),
-    ),
-    GoRoute(
-      path: AppRoutes.newTrip,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const TripFormPage()),
-    ),
-    GoRoute(
-      path: '${AppRoutes.editTrip}/:id',
-      pageBuilder: (context, state) => _slidePage(
-        key: state.pageKey,
-        child: TripFormPage(tripId: state.pathParameters['id'] ?? ''),
-      ),
-    ),
-    GoRoute(
-      path: AppRoutes.newExpense,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const ExpenseFormPage()),
-    ),
-    GoRoute(
-      path: AppRoutes.newTopUp,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const TopUpFormPage()),
-    ),
-    GoRoute(
-      path: AppRoutes.newTransfer,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const TransferFormPage()),
-    ),
-    GoRoute(
-      path: AppRoutes.setBalance,
-      pageBuilder: (context, state) =>
-          _slidePage(key: state.pageKey, child: const SetBalanceFormPage()),
-    ),
-    GoRoute(
-      path: '${AppRoutes.accountDetails}/:id',
-      pageBuilder: (context, state) => _slidePage(
-        key: state.pageKey,
-        child: AccountDetailPage(accountId: state.pathParameters['id'] ?? ''),
-      ),
     ),
     GoRoute(
       path: '${AppRoutes.details}/:id',

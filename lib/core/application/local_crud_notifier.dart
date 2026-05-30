@@ -47,12 +47,12 @@ mixin LocalCrudNotifier<T> {
   /// Validates or normalises [entity] before [create] forwards it to the
   /// repository. Return an [Err] to abort the write. The default lets
   /// everything through.
-  Future<Result<T, Failure>> beforeCreate(T entity) async => Ok(entity);
+  Future<Result<T>> beforeCreate(T entity) async => Ok(entity);
 
   /// Validates or normalises [entity] before [update] forwards it to the
   /// repository. Return an [Err] to abort the write. The default lets
   /// everything through.
-  Future<Result<T, Failure>> beforeUpdate(T entity) async => Ok(entity);
+  Future<Result<T>> beforeUpdate(T entity) async => Ok(entity);
 
   // ---------------------------------------------------------------------------
   // After hooks
@@ -62,16 +62,16 @@ mixin LocalCrudNotifier<T> {
   /// or failed. [entity] is the value that was passed to the repository (the
   /// output of [beforeCreate]). Override to run follow-up writes or, when
   /// [result] is [Err], to undo a side effect from [beforeCreate].
-  Future<void> afterCreate(T entity, Result<T, Failure> result) async {}
+  Future<void> afterCreate(T entity, Result<T> result) async {}
 
   /// Called after the repository [update] call completes. [entity] is the
   /// value that was passed to the repository (the output of [beforeUpdate]).
   /// Override to run follow-up writes or compensate on [Err].
-  Future<void> afterUpdate(T entity, Result<T, Failure> result) async {}
+  Future<void> afterUpdate(T entity, Result<T> result) async {}
 
   /// Called after the repository [deleteById] call completes. Override to
   /// cascade deletes or compensate when [result] is [Err].
-  Future<void> afterDelete(String id, Result<void, Failure> result) async {}
+  Future<void> afterDelete(String id, Result<void> result) async {}
 
   // ---------------------------------------------------------------------------
   // CRUD surface
@@ -80,9 +80,9 @@ mixin LocalCrudNotifier<T> {
   /// The live collection — wire this from `build()`.
   Stream<List<T>> watchAll() => repository.watchAll();
 
-  Future<Result<T, Failure>> fetch(String id) => repository.fetchById(id);
+  Future<Result<T>> fetch(String id) => repository.fetchById(id);
 
-  Future<Result<T, Failure>> create(T entity) async {
+  Future<Result<T>> create(T entity) async {
     final checked = await beforeCreate(entity);
     if (checked case Ok(value: final validated)) {
       final result = await repository.create(validated);
@@ -92,7 +92,7 @@ mixin LocalCrudNotifier<T> {
     return checked;
   }
 
-  Future<Result<T, Failure>> update(T entity) async {
+  Future<Result<T>> update(T entity) async {
     final checked = await beforeUpdate(entity);
     if (checked case Ok(value: final validated)) {
       final result = await repository.update(validated);
@@ -102,7 +102,7 @@ mixin LocalCrudNotifier<T> {
     return checked;
   }
 
-  Future<Result<void, Failure>> delete(String id) async {
+  Future<Result<void>> delete(String id) async {
     final result = await repository.deleteById(id);
     await afterDelete(id, result);
     return result;

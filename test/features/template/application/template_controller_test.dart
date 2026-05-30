@@ -1,139 +1,140 @@
-import 'package:flutter_foundation_kit/features/template/application/template_providers.dart';
+import 'package:flutter_foundation_kit/core/data/data.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/template/application/template_controller.dart';
+import 'package:flutter_foundation_kit/features/template/data/template_repository.dart';
+import 'package:flutter_foundation_kit/features/template/domain/project_receipt.dart';
 import 'package:flutter_foundation_kit/features/template/domain/project_track.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// In-memory fake that isolates controller tests from Hive.
+class _FakeTemplateRepository
+    implements CrudRepository<ProjectReceipt, String> {
+  final List<ProjectReceipt> stored = [];
+
+  @override
+  Future<Result<ProjectReceipt>> create(ProjectReceipt entity) async {
+    stored.add(entity);
+    return Ok(entity);
+  }
+
+  @override
+  Stream<List<ProjectReceipt>> watchAll() => Stream.value(List.of(stored));
+
+  @override
+  Future<Result<ProjectReceipt>> fetchById(String id) async =>
+      const Err(NotFoundFailure());
+
+  @override
+  Future<Result<ProjectReceipt>> update(ProjectReceipt entity) async =>
+      Ok(entity);
+
+  @override
+  Future<Result<void>> deleteById(String id) async => const Ok(null);
+}
+
+ProviderContainer _container(_FakeTemplateRepository fakeRepo) =>
+    ProviderContainer(
+      overrides: [templateRepositoryProvider.overrideWithValue(fakeRepo)],
+    );
+
 void main() {
-  test('starts with a useful sample state', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      templateControllerProvider,
-      (previous, next) {},
-    );
-    addTearDown(subscription.close);
-
-    final state = await container.read(templateControllerProvider.future);
-
-    expect(state.track, ProjectTrack.engineering);
-    expect(state.seats, 3);
-    expect(state.receipt.total, 328);
-  });
-
-  test('updates track through an intent method', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      templateControllerProvider,
-      (previous, next) {},
-    );
-    addTearDown(subscription.close);
-    final controller = container.read(templateControllerProvider.notifier);
-
-    await container.read(templateControllerProvider.future);
-    await controller.setTrack(ProjectTrack.design);
-
-    final state = await container.read(templateControllerProvider.future);
-    expect(state.track, ProjectTrack.design);
-  });
-
-  test('increments seats through an intent method', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      templateControllerProvider,
-      (previous, next) {},
-    );
-    addTearDown(subscription.close);
-    final controller = container.read(templateControllerProvider.notifier);
-
-    await container.read(templateControllerProvider.future);
-    await controller.incrementSeats();
-
-    final state = await container.read(templateControllerProvider.future);
-    expect(state.seats, 4);
-  });
-
-  test('clamps seats to the minimum supported bound', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      templateControllerProvider,
-      (previous, next) {},
-    );
-    addTearDown(subscription.close);
-    final controller = container.read(templateControllerProvider.notifier);
-
-    await container.read(templateControllerProvider.future);
-    await controller.setSeats(-10);
-
-    final state = await container.read(templateControllerProvider.future);
-    expect(state.seats, 1);
-  });
-
-  test('clamps seats to the maximum supported bound', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final subscription = container.listen(
-      templateControllerProvider,
-      (previous, next) {},
-    );
-    addTearDown(subscription.close);
-    final controller = container.read(templateControllerProvider.notifier);
-
-    await container.read(templateControllerProvider.future);
-    await controller.setSeats(40);
-
-    final state = await container.read(templateControllerProvider.future);
-    expect(state.seats, 12);
-  });
-
-  test(
-    'confirms the current receipt and keeps the receipt state intact',
-    () async {
-      final container = ProviderContainer();
+  group('beforeCreate validation', () {
+    test('rejects a null track', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
       addTearDown(container.dispose);
-      final subscription = container.listen(
-        templateControllerProvider,
-        (previous, next) {},
-      );
-      addTearDown(subscription.close);
       final controller = container.read(templateControllerProvider.notifier);
 
-      await container.read(templateControllerProvider.future);
-      await controller.confirmReceipt();
-
-      final state = await container.read(templateControllerProvider.future);
-      expect(state.receipt.total, 328);
-    },
-  );
-
-  test(
-    'confirmed count increments via the stream after each confirmation',
-    () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final controllerSubscription = container.listen(
-        templateControllerProvider,
-        (previous, next) {},
+      final result = await controller.create(
+        const ProjectReceipt(track: null, seats: 3),
       );
-      addTearDown(controllerSubscription.close);
+
+      expect(result, isA<Err<ProjectReceipt>>());
+      expect(repo.stored, isEmpty);
+    });
+
+    test('rejects zero seats', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
+      addTearDown(container.dispose);
       final controller = container.read(templateControllerProvider.notifier);
 
-      await container.read(templateControllerProvider.future);
-
-      final values = <int>[];
-      final subscription = container.listen<AsyncValue<int>>(
-        templateConfirmedCountProvider,
-        (previous, next) => next.whenData(values.add),
-        fireImmediately: true,
+      final result = await controller.create(
+        const ProjectReceipt(track: ProjectTrack.engineering, seats: 0),
       );
 
-      await controller.confirmReceipt();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(result, isA<Err<ProjectReceipt>>());
+      expect(repo.stored, isEmpty);
+    });
 
-      expect(values, contains(1));
-      addTearDown(subscription.close);
-    },
-  );
+    test('rejects negative seats', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
+      addTearDown(container.dispose);
+      final controller = container.read(templateControllerProvider.notifier);
+
+      final result = await controller.create(
+        const ProjectReceipt(track: ProjectTrack.design, seats: -1),
+      );
+
+      expect(result, isA<Err<ProjectReceipt>>());
+    });
+  });
+
+  group('beforeCreate transformation', () {
+    test('stamps confirmedAt before storing', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
+      addTearDown(container.dispose);
+      final controller = container.read(templateControllerProvider.notifier);
+
+      await controller.create(
+        const ProjectReceipt(track: ProjectTrack.engineering, seats: 3),
+      );
+
+      expect(repo.stored, hasLength(1));
+      expect(repo.stored.first.confirmedAt, isNotNull);
+    });
+
+    test('generates a non-empty id before storing', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
+      addTearDown(container.dispose);
+      final controller = container.read(templateControllerProvider.notifier);
+
+      await controller.create(
+        const ProjectReceipt(track: ProjectTrack.growth, seats: 2),
+      );
+
+      expect(repo.stored.first.id, isNotEmpty);
+    });
+
+    test('preserves track and seat count from the draft', () async {
+      final repo = _FakeTemplateRepository();
+      final container = _container(repo);
+      addTearDown(container.dispose);
+      final controller = container.read(templateControllerProvider.notifier);
+
+      await controller.create(
+        const ProjectReceipt(track: ProjectTrack.design, seats: 5),
+      );
+
+      expect(repo.stored.first.track, ProjectTrack.design);
+      expect(repo.stored.first.seats, 5);
+    });
+  });
+
+  test('successful create returns Ok', () async {
+    final repo = _FakeTemplateRepository();
+    final container = _container(repo);
+    addTearDown(container.dispose);
+    final controller = container.read(templateControllerProvider.notifier);
+
+    final result = await controller.create(
+      const ProjectReceipt(track: ProjectTrack.engineering, seats: 3),
+    );
+
+    expect(result, isA<Ok<ProjectReceipt>>());
+  });
 }

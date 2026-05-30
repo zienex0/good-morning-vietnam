@@ -134,7 +134,7 @@ class OrdersController extends _$OrdersController
 
   // Validation / normalisation — runs before every create.
   @override
-  Future<Result<Order, Failure>> beforeCreate(Order draft) async {
+  Future<Result<Order>> beforeCreate(Order draft) async {
     final title = draft.title.trim();
     if (title.isEmpty) {
       return const Err(ValidationFailure('Enter an order title.'));
@@ -150,7 +150,7 @@ class OrdersController extends _$OrdersController
   // Side effects / rollback — runs after every create, success or failure.
   // Override afterUpdate / afterDelete the same way when needed.
   @override
-  Future<void> afterCreate(Order entity, Result<Order, Failure> result) async {
+  Future<void> afterCreate(Order entity, Result<Order> result) async {
     if (result case Ok()) {
       // e.g. send a notification, write to a second repo, etc.
     }
@@ -291,7 +291,7 @@ class MonthlyRevenueUseCase {
   const MonthlyRevenueUseCase(this._repository);
   final CrudRepository<ProjectReceipt, String> _repository;
 
-  Future<Result<int, Failure>> call(DateTime month) async {
+  Future<Result<int>> call(DateTime month) async {
     final receipts = await _repository.watchAll().first;
     final total = receipts
         .where((r) => r.confirmedAt?.month == month.month)
@@ -313,7 +313,7 @@ class TemplateController extends _$TemplateController
     with LocalCrudNotifier<ProjectReceipt> {
   // ...repository getter + build() as usual...
 
-  Future<Result<int, Failure>> revenueThisMonth() =>
+  Future<Result<int>> revenueThisMonth() =>
       ref.read(monthlyRevenueUseCaseProvider)(DateTime.now());
 }
 ```
@@ -335,7 +335,7 @@ roll back that write when `result` is `Err`. Both hooks have `ref`.
 
 ```dart
 @override
-Future<Result<Order, Failure>> beforeCreate(Order draft) async {
+Future<Result<Order>> beforeCreate(Order draft) async {
   // Reserve the slot first; abort the create if reservation fails.
   final reserved = await ref.read(slotRepositoryProvider).reserve(draft.slotId);
   if (reserved case Err(failure: final failure)) return Err(failure);
@@ -343,7 +343,7 @@ Future<Result<Order, Failure>> beforeCreate(Order draft) async {
 }
 
 @override
-Future<void> afterCreate(Order entity, Result<Order, Failure> result) async {
+Future<void> afterCreate(Order entity, Result<Order> result) async {
   // The order write failed after we reserved the slot — release it.
   if (result case Err()) {
     await ref.read(slotRepositoryProvider).release(entity.slotId);
@@ -362,7 +362,7 @@ class CompleteOrderUseCase {
   final OrderRepository _orders;
   final NotificationService _notifications;
 
-  Future<Result<Order, Failure>> call(String id) async { ... }
+  Future<Result<Order>> call(String id) async { ... }
 }
 
 @Riverpod(keepAlive: true)

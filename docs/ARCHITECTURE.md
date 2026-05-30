@@ -105,13 +105,13 @@ class HiveProjectRepository extends HiveLocalRepository<Project>
       );
 
   @override
-  Future<Result<List<Project>, Failure>> listProjects() => list();
+  Future<Result<List<Project>>> listProjects() => list();
 }
 ```
 
 `HiveLocalRepository` contract worth knowing:
 
-- One-shot reads (`list`, `fetchById`) return `Result<T, Failure>`. Watch streams
+- One-shot reads (`list`, `fetchById`) return `Result<T>`. Watch streams
   (`watch`, `watchAll`) stay `Stream<List<T>>` and surface failures as stream
   errors so Riverpod converts them to `AsyncError` — do not wrap stream payloads
   in `Result`.
@@ -378,7 +378,7 @@ class TemplateController extends _$TemplateController
   Stream<List<ProjectReceipt>> build() => watchAll();
 
   @override
-  Future<Result<ProjectReceipt, Failure>> beforeCreate(ProjectReceipt draft) async {
+  Future<Result<ProjectReceipt>> beforeCreate(ProjectReceipt draft) async {
     if (draft.track == null) {
       return const Err(ValidationFailure('Select a project track.'));
     }
@@ -425,7 +425,7 @@ providers through `ref` and return an `Err` the page surfaces:
 
 ```dart
 @override
-Future<Result<ProjectReceipt, Failure>> beforeCreate(ProjectReceipt draft) async {
+Future<Result<ProjectReceipt>> beforeCreate(ProjectReceipt draft) async {
   if (draft.track == null) {
     return const Err(ValidationFailure('Select a project track.'));
   }
@@ -441,7 +441,7 @@ Future<Result<ProjectReceipt, Failure>> beforeCreate(ProjectReceipt draft) async
 class LoadOrdersUseCase {
   const LoadOrdersUseCase(this._repository);
   final OrderRepository _repository;
-  Future<Result<List<Order>, Failure>> call() => _repository.list(); // pass-through
+  Future<Result<List<Order>>> call() => _repository.list(); // pass-through
 }
 ```
 
@@ -455,7 +455,7 @@ class CheckoutUseCase {
   final OrderRepository _orders;
   final PaymentRepository _payments;
   // multi-repo flow shared by, e.g., CartController and QuickBuyController
-  Future<Result<Order, Failure>> call(Cart cart) async { /* ... */ }
+  Future<Result<Order>> call(Cart cart) async { /* ... */ }
 }
 ```
 
@@ -503,7 +503,7 @@ context.go('${AppRoutes.receipt}/${receipt.id}');
 - Repositories/services normalize SDK, network, database, parsing, and platform
   failures before they reach controllers.
 - UI should display app-level failures, not raw SDK exceptions.
-- Use `Result<T, Failure>` or the local async state convention at boundaries.
+- Use `Result<T>` or the local async state convention at boundaries.
 - Do not use `print` in app code. Use `loggerProvider`.
 - Wrap analytics, crash reporting, permissions, storage, notifications, and
   platform SDKs behind services/providers.
@@ -521,7 +521,7 @@ try {
 }
 ```
 
-**Do** — repository returns `Result<T, Failure>`; controller maps it with a switch:
+**Do** — repository returns `Result<T>`; controller maps it with a switch:
 
 ```dart
 final result = await _repository.list();
@@ -617,11 +617,11 @@ Use this before opening or approving a PR.
   are wired through Riverpod providers in `application/`.
 - Write controllers use `MutationNotifier` when they only need
   loading/error/success mutation state.
-- Repositories/services normalize low-level failures and return `Result<T, Failure>`.
+- Repositories/services normalize low-level failures and return `Result<T>`.
 - Hive-backed repositories reuse `HiveLocalRepository<T>` with inline
   `id` / `toJson` / `fromJson` functions instead of hand-rolling local
   list/watch/fetch/save/delete plumbing.
-- Controllers unwrap `Result<T, Failure>` into `AsyncValue<T>` before the UI renders it.
+- Controllers unwrap `Result<T>` into `AsyncValue<T>` before the UI renders it.
 - Derived values are getters or pure functions near the owning model/state.
 - UI displays localized, user-facing messages.
 

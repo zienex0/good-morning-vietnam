@@ -42,7 +42,7 @@ void main() {
     );
 
     expectOk(await repo.deleteById('a'));
-    expect(await repo.fetchById('a'), isA<Err<_TestItem, Failure>>());
+    expect(await repo.fetchById('a'), isA<Err<_TestItem>>());
   });
 
   test('create rejects a duplicate id with ConflictFailure', () async {
@@ -51,8 +51,8 @@ void main() {
 
     final result = await repo.create(const _TestItem(id: 'a', value: 2));
 
-    expect(result, isA<Err<_TestItem, Failure>>());
-    expect((result as Err<_TestItem, Failure>).failure, isA<ConflictFailure>());
+    expect(result, isA<Err<_TestItem>>());
+    expect((result as Err<_TestItem>).failure, isA<ConflictFailure>());
     // The original row is untouched by the rejected create.
     expect(
       expectOk(await repo.fetchById('a')),
@@ -81,7 +81,7 @@ void main() {
   });
 }
 
-T expectOk<T>(Result<T, Failure> result) {
+T expectOk<T>(Result<T> result) {
   return switch (result) {
     Ok(value: final value) => value,
     Err(failure: final failure) => fail('Expected Ok, got $failure'),

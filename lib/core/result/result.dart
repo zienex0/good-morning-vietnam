@@ -1,19 +1,20 @@
-/// A typed result of an operation that can succeed with [S] or fail with [F].
+/// A typed result of an operation that can succeed with [T] or fail with a
+/// [Failure].
 ///
-/// Repositories return `Result<T, Failure>`. Controllers unwrap the value into
+/// Repositories return `Result<T>`. Controllers unwrap the value into
 /// `AsyncValue<T>` with exhaustive switch expressions before the UI sees it.
-sealed class Result<S, F extends Failure> {
+sealed class Result<T> {
   const Result();
 }
 
-final class Ok<S, F extends Failure> extends Result<S, F> {
+final class Ok<T> extends Result<T> {
   const Ok(this.value);
-  final S value;
+  final T value;
 }
 
-final class Err<S, F extends Failure> extends Result<S, F> {
+final class Err<T> extends Result<T> {
   const Err(this.failure);
-  final F failure;
+  final Failure failure;
 }
 
 sealed class Failure {
