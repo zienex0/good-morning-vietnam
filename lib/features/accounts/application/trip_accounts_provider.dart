@@ -1,11 +1,10 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
-import 'package:flutter_foundation_kit/features/accounts/data/account_id_generator.dart';
-import 'package:flutter_foundation_kit/features/accounts/data/account_repository.dart';
+import 'package:flutter_foundation_kit/features/accounts/application/accounts_controller.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/convert_to_home_currency_use_case.dart';
+import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'trip_accounts_provider.g.dart';
@@ -17,28 +16,18 @@ typedef AccountBalance = ({
   double homeBalance,
 });
 
-@Riverpod(keepAlive: true)
-Box<String> accountsBox(Ref ref) {
-  throw StateError('accountsBoxProvider must be overridden in main().');
-}
-
-@Riverpod(keepAlive: true)
-AccountRepository accountRepository(Ref ref) {
-  return HiveAccountRepository(accountsBox: ref.watch(accountsBoxProvider));
-}
-
-@Riverpod(keepAlive: true)
-AccountIdGenerator accountIdGenerator(Ref ref) =>
-    const TimestampAccountIdGenerator();
-
-/// Raw accounts for the active trip.
+/// Accounts belonging to the active trip (the controller owns all trips').
 @riverpod
-Stream<List<Account>> accounts(Ref ref) {
+Future<List<Account>> accounts(Ref ref) async {
   final id = ref.watch(activeTripIdProvider).value;
   if (id == null) {
-    return Stream.value(const <Account>[]);
+    return const <Account>[];
   }
-  return ref.watch(accountRepositoryProvider).watchAccounts(tripId: id);
+  final all = await ref.watch(accountsControllerProvider.future);
+  return [
+    for (final account in all)
+      if (account.tripId == id && !account.archived) account,
+  ];
 }
 
 /// Accounts for the active trip with their balances, sorted by home balance.
@@ -49,7 +38,7 @@ Future<List<AccountBalance>> tripAccounts(Ref ref) async {
     return const [];
   }
   final accounts = await ref.watch(accountsProvider.future);
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
   final convert = ConvertToHomeCurrencyUseCase(
     ref.watch(exchangeRateRepositoryProvider),
   );

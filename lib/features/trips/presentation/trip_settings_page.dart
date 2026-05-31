@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/application/trip_form_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/application/trips_provider.dart';
+import 'package:flutter_foundation_kit/features/trips/application/trips_controller.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,16 +17,16 @@ class TripSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tripsAsync = ref.watch(tripsProvider);
+    final tripsAsync = ref.watch(tripsControllerProvider);
     final activeTripAsync = ref.watch(activeTripProvider);
-    final formState = ref.watch(tripFormProvider);
+    final formState = ref.watch(tripsControllerProvider);
     final trips = tripsAsync.value ?? const <Trip>[];
     final activeTrip = activeTripAsync.value;
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
       value: tripsAsync,
-      onRetry: () => ref.invalidate(tripsProvider),
+      onRetry: () => ref.invalidate(tripsControllerProvider),
       data: (_) {
         return AppSliverPage(
           title: 'Trip settings',
@@ -59,13 +60,13 @@ class TripSettingsPage extends ConsumerWidget {
                           return;
                         }
                         final activated = await ref
-                            .read(tripFormProvider.notifier)
-                            .activateTrip(value);
+                            .read(tripsControllerProvider.notifier)
+                            .activate(value);
                         if (!context.mounted) {
                           return;
                         }
-                        if (!activated) {
-                          AppSnackBars.error(context, 'Could not change trip.');
+                        if (activated case Err(failure: final failure)) {
+                          AppSnackBars.error(context, failureMessage(failure));
                         }
                       },
                       options: [

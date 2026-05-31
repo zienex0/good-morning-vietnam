@@ -12,7 +12,7 @@ class CalculateSpendTrendUseCase {
 
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
 
-  Future<Result<List<SpendTrendPoint>, Failure>> call({
+  Future<Result<List<SpendTrendPoint>>> call({
     required Trip trip,
     required List<Transaction> transactions,
     required DateTime asOf,

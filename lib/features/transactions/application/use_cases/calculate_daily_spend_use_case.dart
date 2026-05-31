@@ -13,7 +13,7 @@ class CalculateDailySpendUseCase {
 
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
 
-  Future<Result<List<DailySpendPoint>, Failure>> call({
+  Future<Result<List<DailySpendPoint>>> call({
     required Trip trip,
     required List<Transaction> transactions,
     required DateTime asOf,

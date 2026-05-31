@@ -1,5 +1,6 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
+import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_average_daily_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_category_breakdown_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_daily_spend_use_case.dart';
@@ -17,7 +18,7 @@ Future<double> totalSpend(Ref ref) async {
   if (trip == null) {
     return 0;
   }
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
   return _orThrow(
     await CalculateTotalSpendUseCase(_convert(ref))(
       trip: trip,
@@ -33,7 +34,7 @@ Future<double> averageDailySpend(Ref ref) async {
   if (trip == null) {
     return 0;
   }
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
   return _orThrow(
     await CalculateAverageDailySpendUseCase(_convert(ref))(
       trip: trip,
@@ -50,7 +51,7 @@ Future<List<DailySpendPoint>> dailySpend(Ref ref) async {
   if (trip == null) {
     return const [];
   }
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
   return _orThrow(
     await CalculateDailySpendUseCase(_convert(ref))(
       trip: trip,
@@ -67,7 +68,7 @@ Future<List<CategorySpend>> categoryBreakdown(Ref ref) async {
   if (trip == null) {
     return const [];
   }
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
   return _orThrow(
     await CalculateCategoryBreakdownUseCase(_convert(ref))(
       trip: trip,
@@ -79,7 +80,7 @@ Future<List<CategorySpend>> categoryBreakdown(Ref ref) async {
 ConvertToHomeCurrencyUseCase _convert(Ref ref) =>
     ConvertToHomeCurrencyUseCase(ref.watch(exchangeRateRepositoryProvider));
 
-T _orThrow<T>(Result<T, Failure> result) => switch (result) {
+T _orThrow<T>(Result<T> result) => switch (result) {
   Ok(value: final value) => value,
   Err(failure: final failure) => throw failure,
 };

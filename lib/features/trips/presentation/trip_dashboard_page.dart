@@ -6,7 +6,7 @@ import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/accounts_total_balance_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/trip_spend_provider.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_category_breakdown_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_daily_spend_use_case.dart';
@@ -27,8 +27,8 @@ class TripDashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tripAsync = ref.watch(activeTripProvider);
-    final accountsAsync = ref.watch(accountsProvider);
-    final transactionsAsync = ref.watch(transactionsProvider);
+    final accountsAsync = ref.watch(accountsControllerProvider);
+    final transactionsAsync = ref.watch(transactionsControllerProvider);
     final totalBalanceAsync = ref.watch(accountsTotalBalanceProvider);
     final totalSpendAsync = ref.watch(totalSpendProvider);
     final averageDailyAsync = ref.watch(averageDailySpendProvider);

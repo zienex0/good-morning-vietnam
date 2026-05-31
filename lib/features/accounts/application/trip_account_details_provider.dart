@@ -1,5 +1,5 @@
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transactions_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
@@ -21,7 +21,7 @@ Future<AccountDetail?> tripAccountDetails(Ref ref, String accountId) async {
     return null;
   }
   final accounts = await ref.watch(tripAccountsProvider.future);
-  final transactions = await ref.watch(transactionsProvider.future);
+  final transactions = await ref.watch(transactionsControllerProvider.future);
 
   AccountBalance? match;
   for (final account in accounts) {

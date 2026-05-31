@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transaction_form_provider.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/set_balance_account_step_page.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
@@ -34,7 +36,7 @@ class SetBalanceFormPageState extends ConsumerState<SetBalanceFormPage> {
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
     final accountsAsync = ref.watch(tripAccountsProvider);
-    final formState = ref.watch(transactionFormProvider);
+    final formState = ref.watch(transactionsControllerProvider);
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
@@ -154,7 +156,7 @@ class SetBalanceFormPageState extends ConsumerState<SetBalanceFormPage> {
     }
 
     final saved = await ref
-        .read(transactionFormProvider.notifier)
+        .read(transactionsControllerProvider.notifier)
         .setAccountBalances(
           tripId: tripId,
           balancesByAccountId: balancesByAccountId,
@@ -162,10 +164,11 @@ class SetBalanceFormPageState extends ConsumerState<SetBalanceFormPage> {
     if (!mounted) {
       return;
     }
-    if (saved) {
-      context.pop();
-    } else {
-      AppSnackBars.error(context, 'Could not set account balances.');
+    switch (saved) {
+      case Ok():
+        context.pop();
+      case Err(failure: final failure):
+        AppSnackBars.error(context, failureMessage(failure));
     }
   }
 
