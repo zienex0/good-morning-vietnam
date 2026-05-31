@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:flutter_foundation_kit/features/trips/application/trips_controller.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
@@ -229,7 +229,7 @@ class TripFormPageState extends ConsumerState<TripFormPage> {
     final controller = ref.read(tripsControllerProvider.notifier);
 
     if (isEditing && trip != null) {
-      final saved = await controller.update(
+      final saved = await controller.save(
         trip.copyWith(
           name: nameController.text,
           homeCurrency: selectedCurrency,

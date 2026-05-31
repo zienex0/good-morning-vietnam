@@ -27,7 +27,7 @@ class TripDashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tripAsync = ref.watch(activeTripProvider);
-    final accountsAsync = ref.watch(accountsControllerProvider);
+    final accountsAsync = ref.watch(accountsProvider);
     final transactionsAsync = ref.watch(transactionsControllerProvider);
     final totalBalanceAsync = ref.watch(accountsTotalBalanceProvider);
     final totalSpendAsync = ref.watch(totalSpendProvider);

@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/accounts_controller.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_account_details_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/account_formatters.dart';
@@ -92,7 +92,7 @@ class AccountDetailPage extends ConsumerWidget {
                                                       accountsControllerProvider
                                                           .notifier,
                                                     )
-                                                    .update(
+                                                    .save(
                                                       view.account.account
                                                           .copyWith(
                                                             name: currentName,

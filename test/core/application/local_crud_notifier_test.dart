@@ -144,7 +144,7 @@ void main() {
       final store = _Store(
         repo,
         allowCreate: false,
-        afterCreateCallback: (_, __) => afterFired = true,
+        afterCreateCallback: (_, _) => afterFired = true,
       );
 
       await store.create(const _Item('a', 1));
@@ -166,7 +166,7 @@ void main() {
         },
       );
 
-      await store.update(const _Item('b', 2));
+      await store.save(const _Item('b', 2));
 
       expect(capturedEntity?.id, 'b');
       expect(capturedResult, isA<Ok<_Item>>());

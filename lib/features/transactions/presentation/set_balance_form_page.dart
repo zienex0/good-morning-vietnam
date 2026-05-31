@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_foundation_kit/core/theme/theme.dart';
-import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/set_balance_account_step_page.dart';

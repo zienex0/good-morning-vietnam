@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
-import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/categories.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
@@ -43,7 +43,7 @@ class ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
   @override
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
-    final accountsAsync = ref.watch(accountsControllerProvider);
+    final accountsAsync = ref.watch(accountsProvider);
     final formState = ref.watch(transactionsControllerProvider);
     final accounts = accountsAsync.value ?? const <Account>[];
 

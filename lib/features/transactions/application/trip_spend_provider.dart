@@ -1,11 +1,11 @@
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
-import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_average_daily_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_category_breakdown_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_daily_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/calculate_total_spend_use_case.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/convert_to_home_currency_use_case.dart';
+import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

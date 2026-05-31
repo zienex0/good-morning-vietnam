@@ -92,7 +92,11 @@ mixin LocalCrudNotifier<T> {
     return checked;
   }
 
-  Future<Result<T>> update(T entity) async {
+  /// Validates [entity] through [beforeUpdate] then persists it.
+  ///
+  /// Named `save` rather than `update` because the generated notifier base
+  /// already defines an `update` method; this is the CRUD write entry point.
+  Future<Result<T>> save(T entity) async {
     final checked = await beforeUpdate(entity);
     if (checked case Ok(value: final validated)) {
       final result = await repository.update(validated);

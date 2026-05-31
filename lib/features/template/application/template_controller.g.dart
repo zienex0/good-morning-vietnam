@@ -6,25 +6,90 @@ part of 'template_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$templateControllerHash() =>
-    r'0000000000000000000000000000000000000000';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Manages the persisted list of confirmed project receipts.
+///
+/// This controller is the canonical example of [LocalCrudNotifier] usage:
+/// - [build] wires the live repository stream into the provider state.
+/// - [beforeCreate] validates and transforms a draft receipt into a confirmed
+///   one (adds timestamp + id) before it reaches the repository.
+/// - The page holds form state (track, seats) locally; the controller only
+///   knows about what has been confirmed and stored.
 
-/// See also [TemplateController].
 @ProviderFor(TemplateController)
-final templateControllerProvider =
-    AutoDisposeStreamNotifierProvider<
-      TemplateController,
-      List<ProjectReceipt>
-    >.internal(
-      TemplateController.new,
-      name: r'templateControllerProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$templateControllerHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+const templateControllerProvider = TemplateControllerProvider._();
 
-typedef _$TemplateController = AutoDisposeStreamNotifier<List<ProjectReceipt>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+/// Manages the persisted list of confirmed project receipts.
+///
+/// This controller is the canonical example of [LocalCrudNotifier] usage:
+/// - [build] wires the live repository stream into the provider state.
+/// - [beforeCreate] validates and transforms a draft receipt into a confirmed
+///   one (adds timestamp + id) before it reaches the repository.
+/// - The page holds form state (track, seats) locally; the controller only
+///   knows about what has been confirmed and stored.
+final class TemplateControllerProvider
+    extends $StreamNotifierProvider<TemplateController, List<ProjectReceipt>> {
+  /// Manages the persisted list of confirmed project receipts.
+  ///
+  /// This controller is the canonical example of [LocalCrudNotifier] usage:
+  /// - [build] wires the live repository stream into the provider state.
+  /// - [beforeCreate] validates and transforms a draft receipt into a confirmed
+  ///   one (adds timestamp + id) before it reaches the repository.
+  /// - The page holds form state (track, seats) locally; the controller only
+  ///   knows about what has been confirmed and stored.
+  const TemplateControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'templateControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$templateControllerHash();
+
+  @$internal
+  @override
+  TemplateController create() => TemplateController();
+}
+
+String _$templateControllerHash() =>
+    r'99541625e1ee7f30c7501b139df9330290b30b11';
+
+/// Manages the persisted list of confirmed project receipts.
+///
+/// This controller is the canonical example of [LocalCrudNotifier] usage:
+/// - [build] wires the live repository stream into the provider state.
+/// - [beforeCreate] validates and transforms a draft receipt into a confirmed
+///   one (adds timestamp + id) before it reaches the repository.
+/// - The page holds form state (track, seats) locally; the controller only
+///   knows about what has been confirmed and stored.
+
+abstract class _$TemplateController
+    extends $StreamNotifier<List<ProjectReceipt>> {
+  Stream<List<ProjectReceipt>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<ProjectReceipt>>, List<ProjectReceipt>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<List<ProjectReceipt>>,
+                List<ProjectReceipt>
+              >,
+              AsyncValue<List<ProjectReceipt>>,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}

@@ -65,7 +65,7 @@ final class TripAccountDetailsProvider
 }
 
 String _$tripAccountDetailsHash() =>
-    r'44112bf2fbaaa95cdd9b4372f64488914eae2dbc';
+    r'edf3663ecc25c53a900aa773108c8bbdcf283f38';
 
 final class TripAccountDetailsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountDetail?>, String> {

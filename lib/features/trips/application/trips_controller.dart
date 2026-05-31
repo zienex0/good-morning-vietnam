@@ -2,10 +2,10 @@ import 'package:flutter_foundation_kit/core/application/local_crud_notifier.dart
 import 'package:flutter_foundation_kit/core/data/repository_capabilities.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/accounts/data/account_repository.dart';
+import 'package:flutter_foundation_kit/features/transactions/data/transaction_repository.dart';
 import 'package:flutter_foundation_kit/features/trips/data/active_trip_id_repository.dart';
 import 'package:flutter_foundation_kit/features/trips/data/trip_repository.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
-import 'package:flutter_foundation_kit/features/transactions/data/transaction_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'trips_controller.g.dart';
@@ -83,7 +83,7 @@ class TripsController extends _$TripsController with LocalCrudNotifier<Trip> {
   Future<Result<Trip>> changeStatus(String tripId, TripStatus status) async {
     final current = await fetch(tripId);
     return switch (current) {
-      Ok(value: final trip) => update(trip.copyWith(status: status)),
+      Ok(value: final trip) => await save(trip.copyWith(status: status)),
       Err() => current,
     };
   }
@@ -95,13 +95,11 @@ class TripsController extends _$TripsController with LocalCrudNotifier<Trip> {
       return const Ok(null);
     }
     final found = await fetch(tripId);
-    return switch (found) {
-      Ok() => () async {
-        await ref.read(activeTripIdRepositoryProvider).write(tripId);
-        return const Ok<void>(null);
-      }(),
-      Err(failure: final failure) => Err(failure),
-    };
+    if (found case Err(failure: final failure)) {
+      return Err(failure);
+    }
+    await ref.read(activeTripIdRepositoryProvider).write(tripId);
+    return const Ok(null);
   }
 
   Trip _normalize(Trip trip) => trip.copyWith(

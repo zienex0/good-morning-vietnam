@@ -3,8 +3,8 @@ import 'package:flutter_foundation_kit/core/data/repository_capabilities.dart';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/accounts/data/account_repository.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/transactions/application/use_cases/convert_to_home_currency_use_case.dart';
+import 'package:flutter_foundation_kit/features/transactions/data/exchange_rate_repository.dart';
 import 'package:flutter_foundation_kit/features/transactions/data/transaction_repository.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/amortization.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/categories.dart';
@@ -80,7 +80,7 @@ class TransactionsController extends _$TransactionsController
         categoryId: categoryId,
         paidAmount: amount,
         paidCurrency: currency,
-        accountAmount: (converted as Ok).value.amountHome,
+        accountAmount: (converted as Ok<({double amountHome, double fxRate})>).value.amountHome,
         accountCurrency: account.currency,
         amortization: amortization,
         createdAt: occurredAt,
@@ -125,7 +125,7 @@ class TransactionsController extends _$TransactionsController
         destAccountId: account.id,
         paidAmount: amount,
         paidCurrency: currency,
-        accountAmount: (converted as Ok).value.amountHome,
+        accountAmount: (converted as Ok<({double amountHome, double fxRate})>).value.amountHome,
         accountCurrency: account.currency,
         createdAt: occurredAt,
       ),
@@ -179,7 +179,7 @@ class TransactionsController extends _$TransactionsController
       if (cross case Err(failure: final failure)) {
         return Err(failure);
       }
-      resolvedDestAmount = (cross as Ok).value.amountHome;
+      resolvedDestAmount = (cross as Ok<({double amountHome, double fxRate})>).value.amountHome;
     }
 
     return create(
