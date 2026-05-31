@@ -4,9 +4,16 @@ import 'dart:io';
 import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/exchange_rate.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Live exchange-rate source. Network-backed, so it is a plain provider rather
+/// than a `localRepository`. Override in tests with a fake.
+final exchangeRateRepositoryProvider = Provider<ExchangeRateRepository>(
+  (ref) => const FrankfurterExchangeRateRepository(),
+);
 
 abstract interface class ExchangeRateRepository {
-  Future<Result<ExchangeRate, Failure>> fetchRate({
+  Future<Result<ExchangeRate>> fetchRate({
     required CurrencyCode base,
     required CurrencyCode quote,
     required DateTime date,
@@ -20,7 +27,7 @@ class FrankfurterExchangeRateRepository implements ExchangeRateRepository {
   final HttpClient? _client;
 
   @override
-  Future<Result<ExchangeRate, Failure>> fetchRate({
+  Future<Result<ExchangeRate>> fetchRate({
     required CurrencyCode base,
     required CurrencyCode quote,
     required DateTime date,

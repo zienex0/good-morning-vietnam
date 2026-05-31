@@ -1,19 +1,20 @@
-/// A typed result of an operation that can succeed with [S] or fail with [F].
+/// A typed result of an operation that can succeed with [T] or fail with a
+/// [Failure].
 ///
-/// Repositories return `Result<T, Failure>`. Controllers unwrap the value into
+/// Repositories return `Result<T>`. Controllers unwrap the value into
 /// `AsyncValue<T>` with exhaustive switch expressions before the UI sees it.
-sealed class Result<S, F extends Failure> {
+sealed class Result<T> {
   const Result();
 }
 
-final class Ok<S, F extends Failure> extends Result<S, F> {
+final class Ok<T> extends Result<T> {
   const Ok(this.value);
-  final S value;
+  final T value;
 }
 
-final class Err<S, F extends Failure> extends Result<S, F> {
+final class Err<T> extends Result<T> {
   const Err(this.failure);
-  final F failure;
+  final Failure failure;
 }
 
 sealed class Failure {
@@ -26,6 +27,12 @@ final class NetworkFailure extends Failure {
 
 final class NotFoundFailure extends Failure {
   const NotFoundFailure();
+}
+
+/// Raised when a write would collide with an entity that already exists,
+/// e.g. creating a record whose id is already present.
+final class ConflictFailure extends Failure {
+  const ConflictFailure();
 }
 
 final class UnauthorizedFailure extends Failure {

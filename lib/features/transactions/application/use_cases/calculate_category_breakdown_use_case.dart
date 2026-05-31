@@ -13,7 +13,7 @@ class CalculateCategoryBreakdownUseCase {
 
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
 
-  Future<Result<List<CategorySpend>, Failure>> call({
+  Future<Result<List<CategorySpend>>> call({
     required Trip trip,
     required List<Transaction> transactions,
   }) async {

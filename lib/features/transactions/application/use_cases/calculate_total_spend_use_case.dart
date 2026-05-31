@@ -9,7 +9,7 @@ class CalculateTotalSpendUseCase {
 
   final ConvertToHomeCurrencyUseCase _convertToHomeCurrency;
 
-  Future<Result<double, Failure>> call({
+  Future<Result<double>> call({
     required Trip trip,
     required List<Transaction> transactions,
   }) async {

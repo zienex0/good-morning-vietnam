@@ -1,4 +1,4 @@
-/// Barrel export for the shared widget kit.
+/// Barrel export for the shared widget framework.
 ///
 /// Import this single file to pull in every reusable widget, formatter, and
 /// chart data type:

@@ -5,7 +5,6 @@ import 'package:flutter_foundation_kit/features/accounts/presentation/account_de
 import 'package:flutter_foundation_kit/features/accounts/presentation/account_form_page.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/accounts_page.dart';
 import 'package:flutter_foundation_kit/features/gallery/presentation/gallery_page.dart';
-import 'package:flutter_foundation_kit/features/template/presentation/template_detail_page.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/expense_form_page.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/set_balance_form_page.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/top_up_form_page.dart';
@@ -126,13 +125,6 @@ GoRouter appRouter(Ref ref) => GoRouter(
       pageBuilder: (context, state) => _slidePage(
         key: state.pageKey,
         child: AccountDetailPage(accountId: state.pathParameters['id'] ?? ''),
-      ),
-    ),
-    GoRoute(
-      path: '${AppRoutes.details}/:id',
-      pageBuilder: (context, state) => _slidePage(
-        key: state.pageKey,
-        child: TemplateDetailPage(id: state.pathParameters['id'] ?? ''),
       ),
     ),
   ],

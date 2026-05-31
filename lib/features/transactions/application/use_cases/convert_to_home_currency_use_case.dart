@@ -7,7 +7,7 @@ class ConvertToHomeCurrencyUseCase {
 
   final ExchangeRateRepository _exchangeRates;
 
-  Future<Result<({double amountHome, double fxRate}), Failure>> call({
+  Future<Result<({double amountHome, double fxRate})>> call({
     required double amount,
     required CurrencyCode sourceCurrency,
     required CurrencyCode homeCurrency,

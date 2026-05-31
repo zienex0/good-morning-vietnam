@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/application/trip_form_provider.dart';
-import 'package:flutter_foundation_kit/features/trips/application/trips_provider.dart';
+import 'package:flutter_foundation_kit/features/trips/application/trips_controller.dart';
 import 'package:flutter_foundation_kit/features/trips/domain/trip.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/widgets/trip_currency_budget_step_page.dart';
 import 'package:flutter_foundation_kit/features/trips/presentation/widgets/trip_dates_status_step_page.dart';
@@ -44,14 +45,14 @@ class TripFormPageState extends ConsumerState<TripFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tripsAsync = ref.watch(tripsProvider);
+    final tripsAsync = ref.watch(tripsControllerProvider);
     final activeTrip = ref.watch(activeTripProvider).value;
-    final formState = ref.watch(tripFormProvider);
+    final formState = ref.watch(tripsControllerProvider);
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
       value: tripsAsync,
-      onRetry: () => ref.invalidate(tripsProvider),
+      onRetry: () => ref.invalidate(tripsControllerProvider),
       data: (trips) {
         Trip? trip;
         if (widget.tripId != null) {
@@ -225,47 +226,51 @@ class TripFormPageState extends ConsumerState<TripFormPage> {
       return;
     }
 
-    if (isEditing && trip != null) {
-      final saved = await ref
-          .read(tripFormProvider.notifier)
-          .editTrip(
-            trip.copyWith(
-              name: nameController.text,
-              homeCurrency: selectedCurrency,
-              startDate: startDate,
-              endDate: endDate,
-              budgetTotal: budgetController.text.trim().isEmpty ? null : budget,
-              status: selectedStatus,
-            ),
-          );
-      if (!mounted) {
-        return;
-      }
-      if (saved) {
-        context.pop();
-      } else {
-        AppSnackBars.error(context, 'Could not save the trip.');
-      }
-      return;
-    }
+    final controller = ref.read(tripsControllerProvider.notifier);
 
-    final created = await ref
-        .read(tripFormProvider.notifier)
-        .createTrip(
+    if (isEditing && trip != null) {
+      final saved = await controller.save(
+        trip.copyWith(
           name: nameController.text,
           homeCurrency: selectedCurrency,
           startDate: startDate,
           endDate: endDate,
           budgetTotal: budgetController.text.trim().isEmpty ? null : budget,
           status: selectedStatus,
-        );
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      switch (saved) {
+        case Ok():
+          context.pop();
+        case Err(failure: final failure):
+          AppSnackBars.error(context, failureMessage(failure));
+      }
+      return;
+    }
+
+    final created = await controller.create(
+      Trip(
+        id: '',
+        name: nameController.text,
+        homeCurrency: selectedCurrency,
+        startDate: startDate,
+        endDate: endDate,
+        budgetTotal: budgetController.text.trim().isEmpty ? null : budget,
+        status: selectedStatus,
+        createdAt: DateTime.now(),
+      ),
+    );
     if (!mounted) {
       return;
     }
-    if (created == null) {
-      AppSnackBars.error(context, 'Could not create the trip.');
-      return;
+    switch (created) {
+      case Ok():
+        context.pop();
+      case Err(failure: final failure):
+        AppSnackBars.error(context, failureMessage(failure));
     }
-    context.pop();
   }
 }

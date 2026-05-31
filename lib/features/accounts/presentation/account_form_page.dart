@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_foundation_kit/features/accounts/application/trip_account_form_provider.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
+import 'package:flutter_foundation_kit/features/accounts/application/accounts_controller.dart';
+import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_details_step_page.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/widgets/account_name_step_page.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
@@ -33,7 +36,7 @@ class AccountFormPageState extends ConsumerState<AccountFormPage> {
   @override
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
-    final formState = ref.watch(accountFormProvider);
+    final formState = ref.watch(accountsControllerProvider);
     final isBusy = formState.isLoading;
 
     return AppAsyncValueView(
@@ -135,21 +138,26 @@ class AccountFormPageState extends ConsumerState<AccountFormPage> {
       return;
     }
 
-    final account = await ref
-        .read(accountFormProvider.notifier)
-        .createAccount(
-          tripId: tripId,
-          name: nameController.text,
-          currency: selectedCurrency,
-          openingBalance: openingBalance,
+    final created = await ref
+        .read(accountsControllerProvider.notifier)
+        .create(
+          Account(
+            id: '',
+            tripId: tripId,
+            name: nameController.text,
+            type: AccountType.cash,
+            currency: selectedCurrency,
+            openingBalance: openingBalance,
+          ),
         );
     if (!mounted) {
       return;
     }
-    if (account != null) {
-      context.pop();
-    } else {
-      AppSnackBars.error(context, 'Could not create the account.');
+    switch (created) {
+      case Ok():
+        context.pop();
+      case Err(failure: final failure):
+        AppSnackBars.error(context, failureMessage(failure));
     }
   }
 }

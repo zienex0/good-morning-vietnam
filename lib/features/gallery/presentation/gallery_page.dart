@@ -36,7 +36,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = ref.watch(themeModeControllerProvider) == ThemeMode.dark;
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
     final trendPoints = <AppTrendPoint>[
       AppTrendPoint(date: DateTime(2026), value: 12),
       AppTrendPoint(date: DateTime(2026, 2), value: 18),
@@ -51,8 +51,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       actions: [
         IconButton(
           tooltip: 'Toggle theme',
-          onPressed: () =>
-              ref.read(themeModeControllerProvider.notifier).toggle(),
+          onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
           icon: Icon(
             isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
           ),

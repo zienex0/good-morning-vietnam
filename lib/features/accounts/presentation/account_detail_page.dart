@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/routing/app_routes.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
+import 'package:flutter_foundation_kit/features/accounts/application/accounts_controller.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_account_details_provider.dart';
-import 'package:flutter_foundation_kit/features/accounts/application/trip_account_form_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/presentation/account_formatters.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
@@ -88,17 +89,16 @@ class AccountDetailPage extends ConsumerWidget {
                                                 );
                                                 final saved = await ref
                                                     .read(
-                                                      accountFormProvider
+                                                      accountsControllerProvider
                                                           .notifier,
                                                     )
-                                                    .editAccount(
-                                                      accountId: view
-                                                          .account
-                                                          .account
-                                                          .id,
-                                                      name: currentName,
+                                                    .save(
+                                                      view.account.account
+                                                          .copyWith(
+                                                            name: currentName,
+                                                          ),
                                                     );
-                                                if (saved) {
+                                                if (saved is Ok) {
                                                   navigator.pop(true);
                                                 }
                                               },
@@ -139,11 +139,9 @@ class AccountDetailPage extends ConsumerWidget {
                                 }
 
                                 final deleted = await ref
-                                    .read(accountFormProvider.notifier)
-                                    .deleteAccountWithTransactions(
-                                      accountId: view.account.account.id,
-                                    );
-                                if (deleted) {
+                                    .read(accountsControllerProvider.notifier)
+                                    .delete(view.account.account.id);
+                                if (deleted is Ok) {
                                   router.go(AppRoutes.accounts);
                                 }
                               },

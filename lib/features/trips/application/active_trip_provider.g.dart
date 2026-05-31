@@ -44,19 +44,22 @@ final class ActiveTripIdProvider
   }
 }
 
-String _$activeTripIdHash() => r'6901a9b883dc2993bd80f1c2adc7975ef4025de8';
+String _$activeTripIdHash() => r'a354021a93caa2d644419a27a93b2f3ea42351d9';
 
-/// The active trip resolved from [tripsProvider], or null when none is active.
+/// The active trip resolved from [tripsControllerProvider], or null when none
+/// is active.
 
 @ProviderFor(activeTrip)
 const activeTripProvider = ActiveTripProvider._();
 
-/// The active trip resolved from [tripsProvider], or null when none is active.
+/// The active trip resolved from [tripsControllerProvider], or null when none
+/// is active.
 
 final class ActiveTripProvider
     extends $FunctionalProvider<AsyncValue<Trip?>, Trip?, FutureOr<Trip?>>
     with $FutureModifier<Trip?>, $FutureProvider<Trip?> {
-  /// The active trip resolved from [tripsProvider], or null when none is active.
+  /// The active trip resolved from [tripsControllerProvider], or null when none
+  /// is active.
   const ActiveTripProvider._()
     : super(
         from: null,
@@ -82,4 +85,4 @@ final class ActiveTripProvider
   }
 }
 
-String _$activeTripHash() => r'3f29433e8506cca75bca7c63cbe467ab665d4b91';
+String _$activeTripHash() => r'd204165bbad7b3f7bdc182f798fcdf1260a832c6';

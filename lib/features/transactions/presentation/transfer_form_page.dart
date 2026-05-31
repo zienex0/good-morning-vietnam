@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transaction_form_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/trips/application/active_trip_provider.dart';
 import 'package:flutter_foundation_kit/shared/widgets/widgets.dart';
@@ -40,7 +42,7 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
     final accountsAsync = ref.watch(accountsProvider);
-    final formState = ref.watch(transactionFormProvider);
+    final formState = ref.watch(transactionsControllerProvider);
     final accounts = accountsAsync.value ?? const <Account>[];
 
     if (sourceAccountId == null && accounts.isNotEmpty) {
@@ -110,7 +112,7 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                       }
 
                       final saved = await ref
-                          .read(transactionFormProvider.notifier)
+                          .read(transactionsControllerProvider.notifier)
                           .createTransfer(
                             tripId: trip.id,
                             sourceAccountId: sourceAccount.id,
@@ -127,13 +129,14 @@ class TransferFormPageState extends ConsumerState<TransferFormPage> {
                       if (!context.mounted) {
                         return;
                       }
-                      if (saved) {
-                        context.pop();
-                      } else {
-                        AppSnackBars.error(
-                          context,
-                          'Could not save the transfer.',
-                        );
+                      switch (saved) {
+                        case Ok():
+                          context.pop();
+                        case Err(failure: final failure):
+                          AppSnackBars.error(
+                            context,
+                            failureMessage(failure),
+                          );
                       }
                     },
             ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foundation_kit/core/result/failure_messages.dart';
+import 'package:flutter_foundation_kit/core/result/result.dart';
 import 'package:flutter_foundation_kit/core/theme/theme.dart';
 import 'package:flutter_foundation_kit/features/accounts/application/trip_accounts_provider.dart';
 import 'package:flutter_foundation_kit/features/accounts/domain/account.dart';
-import 'package:flutter_foundation_kit/features/transactions/application/transaction_form_provider.dart';
+import 'package:flutter_foundation_kit/features/transactions/application/transactions_controller.dart';
 import 'package:flutter_foundation_kit/features/transactions/domain/transaction.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/transaction_formatters.dart';
 import 'package:flutter_foundation_kit/features/transactions/presentation/widgets/top_up_details_step_page.dart';
@@ -37,7 +39,7 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(activeTripProvider);
     final accountsAsync = ref.watch(accountsProvider);
-    final formState = ref.watch(transactionFormProvider);
+    final formState = ref.watch(transactionsControllerProvider);
     final accounts = accountsAsync.value ?? const <Account>[];
 
     if (selectedAccountId == null && accounts.isNotEmpty) {
@@ -154,7 +156,7 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
     }
 
     final saved = await ref
-        .read(transactionFormProvider.notifier)
+        .read(transactionsControllerProvider.notifier)
         .createTopUp(
           tripId: tripId,
           accountId: selectedAccount.id,
@@ -164,10 +166,11 @@ class TopUpFormPageState extends ConsumerState<TopUpFormPage> {
     if (!mounted) {
       return;
     }
-    if (saved) {
-      context.pop();
-    } else {
-      AppSnackBars.error(context, 'Could not save the top up.');
+    switch (saved) {
+      case Ok():
+        context.pop();
+      case Err(failure: final failure):
+        AppSnackBars.error(context, failureMessage(failure));
     }
   }
 

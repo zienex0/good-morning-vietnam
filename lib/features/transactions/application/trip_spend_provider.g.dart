@@ -44,7 +44,7 @@ final class TotalSpendProvider
   }
 }
 
-String _$totalSpendHash() => r'7ac6de551e6438f4927edafccfe90f62bd9b4a45';
+String _$totalSpendHash() => r'4d752e521a3d4be26b31895cb8af3d754120587a';
 
 /// Average per-day spend for the active trip so far, in home currency.
 
@@ -82,7 +82,7 @@ final class AverageDailySpendProvider
   }
 }
 
-String _$averageDailySpendHash() => r'00e757732014ddcd4e514d92891c62101f80f801';
+String _$averageDailySpendHash() => r'907386a146cc21422d0e6f10d4d07da2852c6c08';
 
 /// Per-day spend points for the active trip's chart, in home currency.
 
@@ -128,7 +128,7 @@ final class DailySpendProvider
   }
 }
 
-String _$dailySpendHash() => r'6c1dfbb6beefad645f6c2b4192aaa5202fe2f97b';
+String _$dailySpendHash() => r'd61c7810db175fec592bb5dbf98688401c0a59d6';
 
 /// Spend grouped by category for the active trip, in home currency.
 
@@ -174,4 +174,4 @@ final class CategoryBreakdownProvider
   }
 }
 
-String _$categoryBreakdownHash() => r'65d5fb13528eda38e122ae48da89ff3e8b258e28';
+String _$categoryBreakdownHash() => r'531eb96f08b545218fac19c8e94b94880a1a845e';
